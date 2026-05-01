@@ -7,14 +7,14 @@ from datetime import date
 st.set_page_config(page_title="Registro de Entrenamiento", layout="centered")
 
 st.title("🏃🏽‍♂️ Registro Diario de Entrenamiento")
-st.write("Registra tus datos de hoy. La información se guardará en Google Sheets.")
+st.write("Registra tus datos de hoy. La información se sincroniza con Google Sheets.")
 
 # --- CONEXIÓN A GOOGLE SHEETS ---
-# Usamos el conector oficial de Streamlit
 conn = st.connection("gsheets", type=GSheetsConnection)
 
 # --- FORMULARIO ---
-with st.form("registro_diario"):
+# Agregamos clear_on_submit=True para que el formulario se limpie al guardar
+with st.form("registro_diario", clear_on_submit=True):
     atleta = st.text_input("Nombre del Atleta", placeholder="Ej: Juan Pérez")
     fecha = st.date_input("Fecha", date.today())
     
@@ -38,47 +38,54 @@ with st.form("registro_diario"):
                 
     enviado = st.form_submit_button("Guardar Entrenamiento")
 
-    # Lógica que se ejecuta al presionar el botón
     if enviado:
         if not atleta:
-            st.error("Por favor, pon tu nombre.")
+            st.error("Por favor, ingresa el nombre del atleta.")
         else:
             # 1. Preparar datos para el registro
+            fecha_str = fecha.strftime("%Y-%m-%d")
             nuevo_reg = {
-                "Fecha": [fecha.strftime("%Y-%m-%d")],
+                "Fecha": [fecha_str],
                 "Atleta": [atleta],
                 "Distancia": [distancia],
                 "Tiempo": [tiempo],
                 "Sensacion": [sensacion],
                 "Cumplimiento": [cumplimiento]
             }
-            
-            # Agregar columnas de series (Serie_1 a Serie_12)
             for i in range(1, 13):
-                # Si el atleta hizo la serie, tomamos el tiempo; si no, queda vacío
                 valor = series_tiempos[i-1] if hubo_series and i <= len(series_tiempos) else ""
                 nuevo_reg[f"Serie_{i}"] = [valor]
             
-            # Convertimos el diccionario a un DataFrame de Pandas
             df_nuevo = pd.DataFrame(nuevo_reg)
 
-            # 2. Enviar a Google Sheets
+            # 2. Enviar a Google Sheets con verificación de duplicados
             try:
-                # Intentamos leer la hoja; si está vacía, creamos un DataFrame base
-                try:
-                    existente = conn.read(ttl=0)
-                except:
-                    existente = pd.DataFrame()
-
-                # Unimos los datos nuevos a la tabla existente
-                df_final = pd.concat([existente, df_nuevo], ignore_index=True)
+                # Leemos la hoja "en vivo"
+                existente = conn.read(ttl=0)
                 
-                # Eliminamos posibles filas que estén totalmente vacías
-                df_final = df_final.dropna(how='all')
+                # --- LÓGICA ANTI-DUPLICADOS ---
+                # Verificamos si existe una fila con el mismo Atleta, Fecha y Distancia
+                # Esto evita guardar el mismo entrenamiento dos veces por error
+                es_duplicado = False
+                if not existente.empty:
+                    duplicados = existente[
+                        (existente['Atleta'].astype(str) == atleta) & 
+                        (existente['Fecha'].astype(str) == fecha_str) & 
+                        (existente['Distancia'].astype(float) == float(distancia))
+                    ]
+                    if not duplicados.empty:
+                        es_duplicado = True
 
-                # Subimos la información actualizada a la nube
-                conn.update(data=df_final)
-                st.success(f"¡Excelente trabajo, {atleta}! Datos guardados en Google Sheets.")
+                if es_duplicado:
+                    st.warning(f"⚠️ Atención: Ya existe un registro para {atleta} en esta fecha con esa distancia. No se ha duplicado la información.")
+                else:
+                    # Si no es duplicado, acumulamos y subimos
+                    df_final = pd.concat([existente, df_nuevo], ignore_index=True)
+                    df_final = df_final.dropna(how='all')
+                    conn.update(data=df_final)
+                    
+                    st.success(f"¡Excelente trabajo, {atleta}! Datos guardados correctamente.")
+                    st.balloons() # Un pequeño festejo visual para el atleta
                 
             except Exception as e:
                 st.error(f"Error al conectar con Google: {e}")
