@@ -66,7 +66,7 @@ with st.form("registro_diario"):
             try:
                 # Intentamos leer la hoja; si está vacía, creamos un DataFrame base
                 try:
-                    existente = conn.read()
+                    existente = conn.read(ttl=0)
                 except:
                     existente = pd.DataFrame()
 
