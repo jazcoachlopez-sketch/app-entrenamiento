@@ -17,7 +17,7 @@ conn = st.connection("gsheets", type=GSheetsConnection)
 
 # --- DISEÑO DE LA INTERFAZ (BARRA LATERAL) ---
 with st.sidebar:
-    st.image("https://cdn-icons-png.flaticon.com/512/1054/1054195.png", width=100)
+    st.image("descarga.png", width=100)
     st.title("Zancada Maestra")
     st.markdown(f"**Coach:** JAZ")
     st.divider()
