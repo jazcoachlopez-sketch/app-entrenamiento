@@ -5,34 +5,61 @@ import plotly.express as px
 from datetime import date
 import time
 
-# --- CONFIGURACIÓN DE LA PÁGINA ---
-st.set_page_config(page_title="App Entrenamiento - Coach", layout="wide")
+# --- CONFIGURACIÓN DE IDENTIDAD Y PÁGINA ---
+st.set_page_config(
+    page_title="Zancada Maestra | Coach JAZ", 
+    page_icon="⚡", 
+    layout="wide"
+)
 
 # --- CONEXIÓN A GOOGLE SHEETS ---
 conn = st.connection("gsheets", type=GSheetsConnection)
 
-# --- MENÚ DE PESTAÑAS ---
-tab_registro, tab_panel = st.tabs(["📝 Registro de Atletas", "📊 Panel de Control"])
+# --- DISEÑO DE LA INTERFAZ (BARRA LATERAL) ---
+with st.sidebar:
+    st.image("https://cdn-icons-png.flaticon.com/512/1054/1054195.png", width=100)
+    st.title("Zancada Maestra")
+    st.markdown(f"**Coach:** JAZ")
+    st.divider()
+    opcion = st.radio("Menú Principal:", ["📝 Registrar Entrenamiento", "📊 Panel de Control"])
+    st.divider()
+    st.caption("© 2026 Zancada Maestra - Paipa, Boyacá")
 
 # ---------------------------------------------------------
-# PESTAÑA 1: REGISTRO
+# OPCIÓN 1: REGISTRO DE ENTRENAMIENTO
 # ---------------------------------------------------------
-with tab_registro:
-    st.title("🏃🏽‍♂️ Registro Diario")
-    st.write("Completa los datos de tu sesión de hoy.")
+if opcion == "📝 Registrar Entrenamiento":
+    st.title("¡Bienvenido, atleta! ⚡")
+    
+    # Cuadro motivacional
+    st.info("""
+    **"La disciplina de hoy es tu victoria de mañana."**  
+    Cada kilómetro cuenta y cada segundo te acerca a tu mejor versión. Registra tus marcas con honestidad; con el apoyo del **Coach JAZ**, vamos a transformar tus límites en metas alcanzadas. 
+    
+    ¡A darle con toda! 🏃🏽‍♂️💨
+    """)
+    
+    st.subheader("Formulario de Seguimiento")
+    st.write("---")
 
-    atleta_input = st.text_input("Nombre del Atleta", placeholder="Ej: Juan Pérez", key="reg_atleta")
-    fecha_input = st.date_input("Fecha", date.today(), key="reg_fecha")
-
-    col1, col2 = st.columns(2)
-    with col1:
+    # Inputs principales
+    col_a, col_b = st.columns(2)
+    with col_a:
+        atleta_input = st.text_input("Nombre del Atleta", placeholder="Escribe tu nombre aquí...")
+        fecha_input = st.date_input("Fecha de la sesión", date.today())
+    with col_b:
         distancia = st.number_input("Distancia Real (km)", min_value=0.0, step=0.1)
-        tiempo = st.text_input("Tiempo Real", placeholder="ej: 00:55:00")
-    with col2:
-        sensacion = st.selectbox("Sensación", ["Excelente", "Bien", "Cansado", "Con Dolor"])
-        cumplimiento = st.radio("¿Cumpliste el objetivo?", ["Sí", "No"])
+        tiempo = st.text_input("Tiempo Total (HH:MM:SS)", placeholder="ej: 00:45:30")
 
-    hubo_series = st.checkbox("¿Hiciste series de velocidad?")
+    col_c, col_d = st.columns(2)
+    with col_c:
+        sensacion = st.selectbox("¿Cómo te sentiste?", ["Excelente", "Bien", "Cansado", "Con Dolor"])
+    with col_d:
+        cumplimiento = st.radio("¿Cumpliste el objetivo de la sesión?", ["Sí", "No"], horizontal=True)
+
+    # Sección de Series
+    st.write("---")
+    hubo_series = st.checkbox("¿Realizaste series de velocidad?")
     series_tiempos = []
 
     if hubo_series:
@@ -40,16 +67,19 @@ with tab_registro:
         cols = st.columns(4)
         for i in range(num_rep):
             with cols[i % 4]:
-                t = st.text_input(f"S{i+1}", key=f"rep_{i}")
+                t = st.text_input(f"Serie {i+1}", key=f"rep_{i}", placeholder="0:00")
                 series_tiempos.append(t)
 
-    enviado = st.button("Guardar Entrenamiento")
+    st.write("---")
+    enviado = st.button("🚀 Guardar Entrenamiento")
 
     if enviado:
         if not atleta_input:
-            st.error("Por favor, ingresa el nombre.")
+            st.error("Atleta, por favor ingresa tu nombre para continuar.")
         else:
             fecha_str = fecha_input.strftime("%Y-%m-%d")
+            
+            # 1. Preparar Diccionario de Datos
             nuevo_reg = {
                 "Fecha": [fecha_str],
                 "Atleta": [atleta_input],
@@ -58,18 +88,22 @@ with tab_registro:
                 "Sensacion": [sensacion],
                 "Cumplimiento": [cumplimiento]
             }
+            # Agregar las 12 columnas de series
             for i in range(1, 13):
                 valor = series_tiempos[i-1] if hubo_series and i <= len(series_tiempos) else ""
                 nuevo_reg[f"Serie_{i}"] = [valor]
             
             df_nuevo = pd.DataFrame(nuevo_reg)
 
+            # 2. Guardar en Google Sheets
             try:
+                # Lectura en vivo sin caché
                 existente = conn.read(ttl=0)
-                # Anti-duplicados
+                
+                # Validación de duplicados (Mismo atleta, fecha y distancia)
                 es_duplicado = False
                 if not existente.empty:
-                    # Asegurar tipos de datos para comparar
+                    # Asegurar que la distancia sea numérica para comparar
                     existente['Distancia'] = pd.to_numeric(existente['Distancia'], errors='coerce')
                     duplicados = existente[
                         (existente['Atleta'].astype(str) == atleta_input) & 
@@ -80,91 +114,110 @@ with tab_registro:
                         es_duplicado = True
 
                 if es_duplicado:
-                    st.warning("⚠️ Este entrenamiento ya fue registrado.")
+                    st.warning(f"⚠️ Ya existe un registro igual para {atleta_input} en esta fecha.")
                 else:
                     df_final = pd.concat([existente, df_nuevo], ignore_index=True)
+                    df_final = df_final.dropna(how='all')
                     conn.update(data=df_final)
-                    st.success("¡Datos guardados!")
+                    
+                    st.success(f"¡Excelente, {atleta_input}! Tu progreso ha sido registrado.")
                     st.balloons()
                     time.sleep(2)
                     st.rerun()
+                    
             except Exception as e:
-                st.error(f"Error: {e}")
+                st.error(f"Error al conectar con la base de datos: {e}")
 
 # ---------------------------------------------------------
-# PESTAÑA 2: PANEL DE CONTROL (VISUALIZACIÓN)
+# OPCIÓN 2: PANEL DE CONTROL (VISUALIZACIÓN)
 # ---------------------------------------------------------
-with tab_panel:
-    st.title("📊 Análisis de Rendimiento")
-    
+else:
+    st.title("📊 Panel de Control - Zancada Maestra")
+    st.markdown(f"Análisis estratégico de rendimiento por el **Coach JAZ**")
+    st.divider()
+
     try:
+        # Cargar datos
         df = conn.read(ttl=0)
         
         if df.empty or len(df.columns) < 2:
-            st.info("Aún no hay datos suficientes para mostrar estadísticas.")
+            st.info("Aún no hay datos registrados para mostrar el análisis.")
         else:
-            # Limpieza básica de datos
+            # Limpieza de datos para gráficas
             df['Fecha'] = pd.to_datetime(df['Fecha'])
             df['Distancia'] = pd.to_numeric(df['Distancia'], errors='coerce')
 
-            # Filtros superiores
-            atleta_sel = st.selectbox("Selecciona un Atleta para filtrar:", ["Todos"] + list(df['Atleta'].unique()))
+            # Filtros en la barra lateral (Sidebar)
+            st.sidebar.subheader("Configuración de Vista")
+            atleta_sel = st.sidebar.selectbox("Filtrar por Atleta:", ["Todos"] + list(df['Atleta'].unique()))
             
             df_plot = df.copy()
             if atleta_sel != "Todos":
                 df_plot = df[df['Atleta'] == atleta_sel]
 
-            # KPIs Rápidos
-            c1, c2, c3 = st.columns(3)
-            with c1:
-                st.metric("Total Kilómetros", f"{df_plot['Distancia'].sum():.1f} km")
-            with c2:
-                st.metric("Sesiones Registradas", len(df_plot))
-            with c3:
-                sensacion_fav = df_plot['Sensacion'].mode()[0] if not df_plot.empty else "N/A"
-                st.metric("Sensación Predominante", sensacion_fav)
+            # Indicadores Clave (KPIs)
+            kpi1, kpi2, kpi3 = st.columns(3)
+            with kpi1:
+                st.metric("Distancia Total", f"{df_plot['Distancia'].sum():.1f} km")
+            with kpi2:
+                st.metric("Sesiones Totales", len(df_plot))
+            with kpi3:
+                # Calcular la sensación más frecuente
+                if not df_plot.empty:
+                    fav = df_plot['Sensacion'].mode()[0]
+                    st.metric("Estado de Ánimo", fav)
 
-            st.divider()
+            st.write("---")
 
-            # Gráfica 1: Evolución de Distancia
-            fig_dist = px.line(df_plot, x='Fecha', y='Distancia', color='Atleta',
-                               title="Evolución de Kilometraje", markers=True,
-                               labels={'Distancia': 'Km recorridos', 'Fecha': 'Día'})
-            st.plotly_chart(fig_dist, use_container_width=True)
+            # Gráfica de Evolución
+            fig_evolucion = px.line(
+                df_plot, x='Fecha', y='Distancia', color='Atleta',
+                title="Progresión de Kilometraje Diario",
+                markers=True,
+                template="plotly_white",
+                color_discrete_sequence=px.colors.qualitative.Dark2
+            )
+            st.plotly_chart(fig_evolucion, use_container_width=True)
 
-            # Gráfica 2: Análisis de Series (Si el atleta seleccionado tiene series)
-            st.subheader("⏱️ Análisis de Series de Velocidad")
-            # Tomamos las columnas Serie_1 a Serie_12
+            # Detalle de Series de Velocidad
+            st.subheader("⏱️ Análisis de Tiempos en Series")
             columnas_series = [f"Serie_{i}" for i in range(1, 13)]
             
             if atleta_sel != "Todos":
-                entrenamiento_series = df_plot[df_plot[columnas_series].notna().any(axis=1)]
+                # Filtrar solo entrenamientos que tengan series registradas
+                mask = df_plot[columnas_series].notna().any(axis=1) & (df_plot[columnas_series] != "")
+                entrenamientos_con_series = df_plot[mask]
                 
-                if not entrenamiento_series.empty:
-                    # Seleccionar una fecha para ver sus series
-                    fecha_series = st.selectbox("Selecciona una fecha de entrenamiento:", 
-                                               entrenamiento_series['Fecha'].dt.date.unique())
+                if not entrenamientos_con_series.empty:
+                    fecha_sel = st.selectbox(
+                        "Selecciona una fecha de entrenamiento para analizar las series:", 
+                        entrenamientos_con_series['Fecha'].dt.date.unique()
+                    )
                     
-                    datos_fecha = entrenamiento_series[entrenamiento_series['Fecha'].dt.date == fecha_series].iloc[0]
+                    # Obtener la fila específica
+                    fila = entrenamientos_con_series[entrenamientos_con_series['Fecha'].dt.date == fecha_sel].iloc[0]
                     
-                    # Preparar datos para gráfica de barras
-                    tiempos_series = []
-                    nombres_series = []
+                    # Preparar datos para la gráfica de barras
+                    eje_x = []
+                    eje_y = []
                     for col in columnas_series:
-                        if datos_fecha[col]: # Si hay tiempo registrado
-                            tiempos_series.append(datos_fecha[col])
-                            nombres_series.append(col)
+                        if fila[col] and str(fila[col]).strip() != "":
+                            eje_x.append(col.replace("_", " "))
+                            eje_y.append(fila[col])
                     
-                    if tiempos_series:
-                        fig_series = px.bar(x=nombres_series, y=tiempos_series, 
-                                           title=f"Tiempos de Series - {fecha_series}",
-                                           labels={'x': 'Número de Serie', 'y': 'Tiempo (min/seg)'},
-                                           text_auto=True)
-                        st.plotly_chart(fig_series, use_container_width=True)
+                    if eje_y:
+                        fig_barras = px.bar(
+                            x=eje_x, y=eje_y, 
+                            title=f"Desempeño de Series - {fecha_sel}",
+                            labels={'x': 'Repetición', 'y': 'Tiempo'},
+                            text_auto=True,
+                            color_discrete_sequence=['#2E7D32']
+                        )
+                        st.plotly_chart(fig_barras, use_container_width=True)
                 else:
-                    st.write("Este atleta no tiene registros de series de velocidad.")
+                    st.info("Este atleta aún no tiene series de velocidad registradas.")
             else:
-                st.write("Selecciona un atleta específico para ver el detalle de sus series.")
+                st.write("👉 *Selecciona un atleta en el menú lateral para ver el detalle de sus series.*")
 
     except Exception as e:
-        st.error(f"Error al cargar el panel: {e}")
+        st.error(f"Error al cargar los datos del panel: {e}")
