@@ -58,13 +58,44 @@ with st.form("registro_diario"):
             
             df_nuevo = pd.DataFrame(nuevo_reg)
 
+            if enviado:
+        if not atleta:
+            st.error("Por favor, pon tu nombre.")
+        else:
+            # 1. Preparar datos
+            nuevo_reg = {
+                "Fecha": [fecha.strftime("%Y-%m-%d")],
+                "Atleta": [atleta],
+                "Distancia": [distancia],
+                "Tiempo": [tiempo],
+                "Sensacion": [sensacion],
+                "Cumplimiento": [cumplimiento]
+            }
+            
+            # Agregar columnas de series
+            for i in range(1, 13):
+                valor = series_tiempos[i-1] if hubo_series and i <= len(series_tiempos) else ""
+                nuevo_reg[f"Serie_{i}"] = [valor]
+            
+            df_nuevo = pd.DataFrame(nuevo_reg)
+
             # 2. Enviar a Google Sheets
             try:
-                # Leemos lo que ya hay
-                existente = conn.read()
+                # Intentamos leer la hoja; si está vacía, creamos un DataFrame base
+                try:
+                    existente = conn.read()
+                except:
+                    existente = pd.DataFrame()
+
+                # Unimos los datos nuevos
                 df_final = pd.concat([existente, df_nuevo], ignore_index=True)
-                # Actualizamos la hoja
+                
+                # Eliminamos posibles filas vacías
+                df_final = df_final.dropna(how='all')
+
+                # Subimos la información actualizada
                 conn.update(data=df_final)
-                st.success("¡Datos guardados en Google Sheets!")
+                st.success(f"¡Excelente trabajo, {atleta}! Datos guardados en Google Sheets.")
+                
             except Exception as e:
                 st.error(f"Error al conectar con Google: {e}")
