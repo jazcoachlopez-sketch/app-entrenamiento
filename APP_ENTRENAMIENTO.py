@@ -12,29 +12,61 @@ st.set_page_config(
     layout="wide"
 )
 
+# --- ESTILO CSS PERSONALIZADO (Para tipografía y centrado) ---
+st.markdown("""
+    <style>
+    /* Importar fuentes modernas */
+    @import url('https://fonts.googleapis.com/css2?family=Archivo+Black&family=Montserrat:wght@400;700&display=swap');
+
+    /* Título Principal Estilo Archivo Black */
+    .main-title {
+        font-family: 'Archivo Black', sans-serif;
+        color: #2E7D32;
+        font-size: 3rem !important;
+        text-align: center;
+        margin-bottom: 0;
+    }
+    
+    /* Fuente general de la app */
+    html, body, [class*="css"]  {
+        font-family: 'Montserrat', sans-serif;
+    }
+    
+    /* Ajuste para que el logo en sidebar no tenga márgenes raros */
+    [data-testid="stSidebarNav"] {
+        padding-top: 20px;
+    }
+    </style>
+    """, unsafe_allow_html=True)
+
 # --- CONEXIÓN A GOOGLE SHEETS ---
 conn = st.connection("gsheets", type=GSheetsConnection)
 
 # --- DISEÑO DE LA INTERFAZ (BARRA LATERAL) ---
 with st.sidebar:
-    # Intenta cargar el logo local, si no, usa uno genérico de alta calidad
-    try:
-        st.image("logo.png", width=200)
-    except:
-        st.image("Gemini_Generated_Image_v1o06fv1o06fv1o0.png", width=120)
+    # Usamos columnas para centrar el logo y que no se vea pequeño
+    col_l1, col_l2, col_l3 = st.columns([1, 5, 1])
+    with col_l2:
+        try:
+            # use_container_width hace que el logo se adapte al ancho de la barra
+            st.image("logo.png", use_container_width=True)
+        except:
+            # Fallback a la imagen generada (Asegúrate que el nombre sea exacto)
+            st.image("Gemini_Generated_Image_v1o06fv1o06fv1o0.png", use_container_width=True)
     
-    st.title("Zancada Maestra")
-    st.markdown("### **Coach:** JAZ")
+    st.markdown("<h2 style='text-align: center; font-family: Archivo Black;'>Zancada Maestra</h2>", unsafe_allow_html=True)
+    st.markdown("<p style='text-align: center; font-weight: bold;'>Coach JAZ</p>", unsafe_allow_html=True)
     st.divider()
+    
     opcion = st.radio("Menú Principal:", ["📝 Registrar Entrenamiento", "📊 Panel de Control"])
     st.divider()
     st.caption("© 2026 Zancada Maestra - Paipa, Boyacá")
 
 # ---------------------------------------------------------
-# OPCIÓN 1: REGISTRO DE ENTRENAMIENTO (CON MENSAJES SORPRESA)
+# OPCIÓN 1: REGISTRO DE ENTRENAMIENTO
 # ---------------------------------------------------------
 if opcion == "📝 Registrar Entrenamiento":
-    st.title("¡Bienvenido, atleta! ⚡")
+    st.markdown("<h1 class='main-title'>¡BIENVENIDO, ATLETA! ⚡</h1>", unsafe_allow_html=True)
     
     st.info("""
     **"La disciplina de hoy es tu victoria de mañana."**  
@@ -80,7 +112,6 @@ if opcion == "📝 Registrar Entrenamiento":
         else:
             fecha_str = fecha_input.strftime("%Y-%m-%d")
             
-            # Mensajes Sorpresa del Coach JAZ
             mensajes_coach = {
                 "Excelente": f"¡Esa es la actitud de un campeón! 🏆 ¡A seguir rompiendo marcas, {atleta_input}!",
                 "Bien": "¡Buen trabajo! La constancia es el secreto del éxito. ¡Vamos por más!",
@@ -89,7 +120,6 @@ if opcion == "📝 Registrar Entrenamiento":
             }
             msg_final = mensajes_coach.get(sensacion, "¡Registro completado!")
 
-            # Preparar datos
             nuevo_reg = {
                 "Fecha": [fecha_str], "Atleta": [atleta_input], "Distancia": [distancia],
                 "Tiempo": [tiempo], "Sensacion": [sensacion], "Cumplimiento": [cumplimiento]
@@ -102,7 +132,6 @@ if opcion == "📝 Registrar Entrenamiento":
                 df_nuevo = pd.DataFrame(nuevo_reg)
                 existente = conn.read(ttl=0)
                 
-                # Validación anti-duplicados
                 es_duplicado = False
                 if not existente.empty:
                     existente['Distancia'] = pd.to_numeric(existente['Distancia'], errors='coerce')
@@ -132,11 +161,11 @@ if opcion == "📝 Registrar Entrenamiento":
                 st.error(f"Error de conexión: {e}")
 
 # ---------------------------------------------------------
-# OPCIÓN 2: PANEL DE CONTROL (ANÁLISIS DE DATOS)
+# OPCIÓN 2: PANEL DE CONTROL
 # ---------------------------------------------------------
 else:
-    st.title("📊 Panel de Control - Zancada Maestra")
-    st.markdown("Análisis estratégico de rendimiento por **Coach JAZ**")
+    st.markdown("<h1 class='main-title'>PANEL DE CONTROL</h1>", unsafe_allow_html=True)
+    st.markdown("<p style='text-align: center;'>Análisis estratégico por <b>Coach JAZ</b></p>", unsafe_allow_html=True)
     st.divider()
 
     try:
@@ -147,11 +176,9 @@ else:
             df['Fecha'] = pd.to_datetime(df['Fecha'])
             df['Distancia'] = pd.to_numeric(df['Distancia'], errors='coerce')
 
-            # Filtros Sidebar
             atleta_sel = st.sidebar.selectbox("Filtrar Atleta:", ["Todos"] + list(df['Atleta'].unique()))
             df_plot = df.copy() if atleta_sel == "Todos" else df[df['Atleta'] == atleta_sel]
 
-            # KPIs
             k1, k2, k3 = st.columns(3)
             with k1: st.metric("Kilómetros Totales", f"{df_plot['Distancia'].sum():.1f} km")
             with k2: st.metric("Sesiones", len(df_plot))
@@ -161,11 +188,11 @@ else:
 
             st.write("---")
 
-            # Gráfica Evolución
-            fig_evol = px.line(df_plot, x='Fecha', y='Distancia', color='Atleta', markers=True, title="Progreso de Distancia")
+            fig_evol = px.line(df_plot, x='Fecha', y='Distancia', color='Atleta', markers=True, 
+                               title="Evolución del Kilometraje", template="plotly_white")
+            fig_evol.update_traces(line_color='#2E7D32')
             st.plotly_chart(fig_evol, use_container_width=True)
 
-            # Análisis de Series
             if atleta_sel != "Todos":
                 st.subheader("⏱️ Detalle de Series")
                 cols_s = [f"Serie_{i}" for i in range(1, 13)]
@@ -182,7 +209,8 @@ else:
                             y_val.append(fila[c])
                     
                     if y_val:
-                        fig_s = px.bar(x=x_val, y=y_val, title=f"Series del {f_sel}", text_auto=True)
+                        fig_s = px.bar(x=x_val, y=y_val, title=f"Series del {f_sel}", 
+                                       text_auto=True, color_discrete_sequence=['#2E7D32'])
                         st.plotly_chart(fig_s, use_container_width=True)
     except Exception as e:
         st.error(f"Error al cargar el panel: {e}")
