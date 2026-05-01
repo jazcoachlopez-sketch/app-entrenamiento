@@ -38,31 +38,12 @@ with st.form("registro_diario"):
                 
     enviado = st.form_submit_button("Guardar Entrenamiento")
 
+    # Lógica que se ejecuta al presionar el botón
     if enviado:
         if not atleta:
             st.error("Por favor, pon tu nombre.")
         else:
-            # 1. Preparar datos
-            nuevo_reg = {
-                "Fecha": [fecha.strftime("%Y-%m-%d")],
-                "Atleta": [atleta],
-                "Distancia": [distancia],
-                "Tiempo": [tiempo],
-                "Sensacion": [sensacion],
-                "Cumplimiento": [cumplimiento]
-            }
-            # Agregar columnas de series
-            for i in range(1, 13):
-                valor = series_tiempos[i-1] if hubo_series and i <= len(series_tiempos) else ""
-                nuevo_reg[f"Serie_{i}"] = [valor]
-            
-            df_nuevo = pd.DataFrame(nuevo_reg)
-
-            if enviado:
-        if not atleta:
-            st.error("Por favor, pon tu nombre.")
-        else:
-            # 1. Preparar datos
+            # 1. Preparar datos para el registro
             nuevo_reg = {
                 "Fecha": [fecha.strftime("%Y-%m-%d")],
                 "Atleta": [atleta],
@@ -72,11 +53,13 @@ with st.form("registro_diario"):
                 "Cumplimiento": [cumplimiento]
             }
             
-            # Agregar columnas de series
+            # Agregar columnas de series (Serie_1 a Serie_12)
             for i in range(1, 13):
+                # Si el atleta hizo la serie, tomamos el tiempo; si no, queda vacío
                 valor = series_tiempos[i-1] if hubo_series and i <= len(series_tiempos) else ""
                 nuevo_reg[f"Serie_{i}"] = [valor]
             
+            # Convertimos el diccionario a un DataFrame de Pandas
             df_nuevo = pd.DataFrame(nuevo_reg)
 
             # 2. Enviar a Google Sheets
@@ -87,13 +70,13 @@ with st.form("registro_diario"):
                 except:
                     existente = pd.DataFrame()
 
-                # Unimos los datos nuevos
+                # Unimos los datos nuevos a la tabla existente
                 df_final = pd.concat([existente, df_nuevo], ignore_index=True)
                 
-                # Eliminamos posibles filas vacías
+                # Eliminamos posibles filas que estén totalmente vacías
                 df_final = df_final.dropna(how='all')
 
-                # Subimos la información actualizada
+                # Subimos la información actualizada a la nube
                 conn.update(data=df_final)
                 st.success(f"¡Excelente trabajo, {atleta}! Datos guardados en Google Sheets.")
                 
