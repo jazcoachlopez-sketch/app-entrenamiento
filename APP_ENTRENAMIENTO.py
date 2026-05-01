@@ -21,7 +21,7 @@ with st.sidebar:
     try:
         st.image("logo.png", width=200)
     except:
-        st.image("https://cdn-icons-png.flaticon.com/512/7159/7159044.png", width=120)
+        st.image("Gemini_Generated_Image_v1o06fv1o06fv1o0.png", width=120)
     
     st.title("Zancada Maestra")
     st.markdown("### **Coach:** JAZ")
