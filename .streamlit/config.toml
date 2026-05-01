@@ -1,0 +1,15 @@
+[theme]
+# El color verde eléctrico para botones y detalles
+primaryColor = "#2E7D32"
+
+# Color de fondo de la aplicación (Blanco limpio)
+backgroundColor = "#FFFFFF"
+
+# Color de fondo de la barra lateral y tarjetas
+secondaryBackgroundColor = "#F0F2F6"
+
+# Color del texto principal
+textColor = "#262730"
+
+# Tipo de fuente (Sans Serif es lo más parecido a Montserrat/Archivo)
+font = "sans serif"
