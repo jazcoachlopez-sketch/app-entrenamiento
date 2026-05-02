@@ -52,7 +52,7 @@ with st.sidebar:
             st.image("logo.png", use_container_width=True)
         except:
             # Fallback a la imagen generada (Asegúrate que el nombre sea exacto)
-            st.image("Gemini_Generated_Image_v1o06fv1o06fv1o0.png", use_container_width=True)
+            st.image("Gemini_Generated_Image_pm4871pm4871pm48.png", use_container_width=True)
     
     st.markdown("<h2 style='text-align: center; font-family: Archivo Black;'>CORRIENDO ANDO</h2>", unsafe_allow_html=True)
     st.markdown("<p style='text-align: center; font-weight: bold;'>Coach JAZ</p>", unsafe_allow_html=True)
