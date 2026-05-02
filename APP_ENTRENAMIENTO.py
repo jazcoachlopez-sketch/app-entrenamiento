@@ -7,7 +7,7 @@ import time
 
 # --- CONFIGURACIÓN DE IDENTIDAD Y PÁGINA ---
 st.set_page_config(
-    page_title="Zancada Maestra | Coach JAZ", 
+    page_title="CORRIENDO ANDO| Coach JAZ", 
     page_icon="⚡", 
     layout="wide"
 )
