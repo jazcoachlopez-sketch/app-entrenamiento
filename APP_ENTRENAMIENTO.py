@@ -43,7 +43,7 @@ with st.sidebar:
     with col_l2:
         try:
             # Intenta cargar tu logo personalizado
-            st.image("logo.png", use_container_width=True)
+            st.image("Gemini_Generated_Image_pm4871pm4871pm48.png", use_container_width=True)
         except:
             # Icono de respaldo si no encuentra el archivo
             st.image("https://cdn-icons-png.flaticon.com/512/7159/7159044.png", use_container_width=True)
