@@ -39,7 +39,7 @@ with st.sidebar:
     col_l1, col_l2, col_l3 = st.columns([1, 5, 1])
     with col_l2:
         try:
-            st.image("logo.png", use_container_width=True)
+            st.image("Gemini_Generated_Image_pm4871pm4871pm48.png", use_container_width=True)
         except:
             st.image("https://cdn-icons-png.flaticon.com/512/7159/7159044.png", use_container_width=True)
     
