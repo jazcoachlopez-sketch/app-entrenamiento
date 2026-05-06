@@ -5,14 +5,14 @@ import plotly.express as px
 from datetime import date
 import time
 
-# --- CONFIGURACIÓN DE IDENTIDAD Y PÁGINA ---
+# --- 1. CONFIGURACIÓN DE IDENTIDAD Y PÁGINA ---
 st.set_page_config(
     page_title="CORRIENDO ANDO | Coach JAZ", 
     page_icon="🏃🏽‍♂️", 
     layout="wide"
 )
 
-# --- ESTILO CSS PERSONALIZADO ---
+# --- 2. ESTILO CSS PERSONALIZADO (Look Profesional) ---
 st.markdown("""
     <style>
     @import url('https://fonts.googleapis.com/css2?family=Archivo+Black&family=Montserrat:wght@400;700&display=swap');
@@ -28,26 +28,31 @@ st.markdown("""
     html, body, [class*="css"]  {
         font-family: 'Montserrat', sans-serif;
     }
+    
+    /* Ajuste de márgenes en la barra lateral */
+    [data-testid="stSidebarNav"] { padding-top: 20px; }
     </style>
     """, unsafe_allow_html=True)
 
-# --- CONEXIÓN A GOOGLE SHEETS ---
+# --- 3. CONEXIÓN A GOOGLE SHEETS ---
 conn = st.connection("gsheets", type=GSheetsConnection)
 
-# --- DISEÑO DE LA INTERFAZ (BARRA LATERAL) ---
+# --- 4. DISEÑO DE LA BARRA LATERAL (Logo y Menú) ---
 with st.sidebar:
     col_l1, col_l2, col_l3 = st.columns([1, 5, 1])
     with col_l2:
         try:
+            # Intenta cargar tu logo personalizado
             st.image("logo.png", use_container_width=True)
         except:
+            # Icono de respaldo si no encuentra el archivo
             st.image("https://cdn-icons-png.flaticon.com/512/7159/7159044.png", use_container_width=True)
     
     st.markdown("<h2 style='text-align: center; font-family: Archivo Black;'>CORRIENDO ANDO</h2>", unsafe_allow_html=True)
     st.markdown("<p style='text-align: center; font-weight: bold;'>Coach JAZ</p>", unsafe_allow_html=True)
     st.divider()
     
-    opcion = st.sidebar.radio("Menú Principal:", ["📝 Registrar Entrenamiento", "📊 Panel de Control"])
+    opcion = st.radio("Menú Principal:", ["📝 Registrar Entrenamiento", "📊 Panel de Control"])
     st.divider()
     st.caption("© 2026 Corriendo Ando - Paipa, Boyacá")
 
@@ -59,16 +64,17 @@ if opcion == "📝 Registrar Entrenamiento":
     
     st.info("""
     **"La disciplina de hoy es tu victoria de mañana."**  
-    Registra tu sesión en **Corriendo Ando**. No olvides reportar tu trabajo de fuerza, es clave para tu rendimiento. 
-    ¡A darle con toda! 🏃🏽‍♂️💨
+    Registra tu sesión. No olvides reportar tu trabajo de fuerza y sensaciones. 
+    ¡Con el apoyo del **Coach JAZ**, vamos por ese objetivo! 🏃🏽‍♂️💨
     """)
     
     st.subheader("Formulario de Seguimiento")
     st.write("---")
 
+    # Bloque A: Datos Básicos
     col_a, col_b = st.columns(2)
     with col_a:
-        atleta_input = st.text_input("Nombre del Atleta", placeholder="Tu nombre...")
+        atleta_input = st.text_input("Nombre del Atleta", placeholder="Escribe tu nombre...")
         fecha_input = st.date_input("Fecha de la sesión", date.today())
         jornada = st.radio("Jornada:", ["Mañana", "Tarde"], horizontal=True)
         
@@ -76,7 +82,7 @@ if opcion == "📝 Registrar Entrenamiento":
         distancia = st.number_input("Distancia Real (km)", min_value=0.0, step=0.1)
         tiempo = st.text_input("Tiempo Total (HH:MM:SS)", placeholder="ej: 00:45:30")
 
-    # --- SECCIÓN DE GIMNASIO / FUERZA ---
+    # Bloque B: Gimnasio y Fuerza
     st.markdown("### 🏋️‍♂️ Trabajo de Fuerza")
     col_gym1, col_gym2 = st.columns([1, 2])
     with col_gym1:
@@ -85,15 +91,18 @@ if opcion == "📝 Registrar Entrenamiento":
     detalle_gym = ""
     if hizo_gym == "Sí":
         with col_gym2:
-            detalle_gym = st.text_area("Cuéntame qué hiciste:", placeholder="Ej: Sentadillas 4x12, Plancha 3 min, Fortalecimiento de core...")
+            detalle_gym = st.text_area("Cuéntame qué hiciste:", placeholder="Ej: Core, Sentadillas, Pesos...")
 
     st.write("---")
+    
+    # Bloque C: Sensaciones
     col_c, col_d = st.columns(2)
     with col_c:
         sensacion = st.selectbox("¿Cómo te sentiste?", ["Excelente", "Bien", "Cansado", "Con Dolor"])
     with col_d:
         cumplimiento = st.radio("¿Cumpliste el objetivo?", ["Sí", "No"], horizontal=True)
 
+    # Bloque D: Series de Velocidad
     st.write("---")
     hubo_series = st.checkbox("¿Realizaste series de velocidad?")
     series_tiempos = []
@@ -111,28 +120,23 @@ if opcion == "📝 Registrar Entrenamiento":
 
     if enviado:
         if not atleta_input:
-            st.error("Atleta, por favor ingresa tu nombre.")
+            st.error("Por favor, ingresa tu nombre.")
         else:
             fecha_str = fecha_input.strftime("%Y-%m-%d")
             
+            # Mensajes del Coach JAZ
             mensajes_coach = {
-                "Excelente": f"¡Esa es la actitud de un campeón! 🏆 ¡A seguir sumando en Corriendo Ando, {atleta_input}!",
-                "Bien": "¡Buen trabajo! La fuerza te hará más rápido. ¡Vamos por más!",
+                "Excelente": f"¡Actitud de campeón! 🏆 ¡A seguir sumando en Corriendo Ando, {atleta_input}!",
+                "Bien": "¡Buen trabajo! La constancia es el secreto. ¡Vamos por más!",
                 "Cansado": "El descanso también es entrenamiento. Recupera bien hoy. 🛌",
-                "Con Dolor": "⚠️ ¡Cuidado! Escucha a tu cuerpo. Reporta esta molestia al Coach JAZ."
+                "Con Dolor": "⚠️ ¡Cuidado! Escucha a tu cuerpo. Reporta esto al Coach JAZ de inmediato."
             }
             msg_final = mensajes_coach.get(sensacion, "¡Registro completado!")
 
             nuevo_reg = {
-                "Fecha": [fecha_str], 
-                "Atleta": [atleta_input], 
-                "Jornada": [jornada],
-                "Distancia": [distancia],
-                "Tiempo": [tiempo], 
-                "Gimnasio": [hizo_gym],        # NUEVO DATO
-                "Detalle_Gimnasio": [detalle_gym], # NUEVO DATO
-                "Sensacion": [sensacion], 
-                "Cumplimiento": [cumplimiento]
+                "Fecha": [fecha_str], "Atleta": [atleta_input], "Jornada": [jornada],
+                "Distancia": [distancia], "Tiempo": [tiempo], "Gimnasio": [hizo_gym],
+                "Detalle_Gimnasio": [detalle_gym], "Sensacion": [sensacion], "Cumplimiento": [cumplimiento]
             }
             for i in range(1, 13):
                 valor = series_tiempos[i-1] if hubo_series and i <= len(series_tiempos) else ""
@@ -142,7 +146,7 @@ if opcion == "📝 Registrar Entrenamiento":
                 df_nuevo = pd.DataFrame(nuevo_reg)
                 existente = conn.read(ttl=0)
                 
-                # Validación anti-duplicados
+                # Validación Duplicados
                 es_duplicado = False
                 if not existente.empty:
                     existente['Distancia'] = pd.to_numeric(existente['Distancia'], errors='coerce')
@@ -152,11 +156,10 @@ if opcion == "📝 Registrar Entrenamiento":
                         (existente['Jornada'].astype(str) == jornada) &
                         (existente['Distancia'] == float(distancia))
                     ]
-                    if not duplicados.empty:
-                        es_duplicado = True
+                    if not duplicados.empty: es_duplicado = True
 
                 if es_duplicado:
-                    st.warning("⚠️ Este entrenamiento ya fue registrado.")
+                    st.warning(f"⚠️ Ya registraste este entrenamiento de la {jornada}.")
                 else:
                     df_final = pd.concat([existente, df_nuevo], ignore_index=True)
                     conn.update(data=df_final)
@@ -165,43 +168,83 @@ if opcion == "📝 Registrar Entrenamiento":
                     time.sleep(3)
                     st.rerun()
             except Exception as e:
-                st.error(f"Error de conexión: {e}")
+                st.error(f"Error: {e}")
 
 # ---------------------------------------------------------
-# OPCIÓN 2: PANEL DE CONTROL
+# OPCIÓN 2: PANEL DE CONTROL (PRIVADO)
 # ---------------------------------------------------------
 else:
-    st.markdown("<h1 class='main-title'>CORRIENDO ANDO - PANEL</h1>", unsafe_allow_html=True)
-    st.divider()
+    st.markdown("<h1 class='main-title'>ÁREA PRIVADA</h1>", unsafe_allow_html=True)
+    
+    # --- BLOQUEO DE SEGURIDAD ---
+    st.sidebar.divider()
+    st.sidebar.subheader("🔐 Acceso Entrenador")
+    password = st.sidebar.text_input("Llave Maestra:", type="password")
 
-    try:
-        df = conn.read(ttl=0)
-        if df.empty:
-            st.info("Aún no hay datos.")
-        else:
-            df['Fecha'] = pd.to_datetime(df['Fecha'])
-            df['Distancia'] = pd.to_numeric(df['Distancia'], errors='coerce')
+    if password == "CoachJaz2026": # Aquí defines tu contraseña
+        st.success("Acceso concedido. Bienvenido, Coach JAZ.")
+        st.write("---")
 
-            atleta_sel = st.sidebar.selectbox("Seleccionar Atleta:", ["Todos"] + list(df['Atleta'].unique()))
-            df_plot = df.copy() if atleta_sel == "Todos" else df[df['Atleta'] == atleta_sel]
+        try:
+            df = conn.read(ttl=0)
+            if df.empty:
+                st.info("Esperando los primeros registros...")
+            else:
+                df['Fecha'] = pd.to_datetime(df['Fecha'])
+                df['Distancia'] = pd.to_numeric(df['Distancia'], errors='coerce')
 
-            # KPIs
-            k1, k2, k3 = st.columns(3)
-            with k1: st.metric("Kilómetros Totales", f"{df_plot['Distancia'].sum():.1f} km")
-            with k2: st.metric("Sesiones", len(df_plot))
-            with k3:
-                # Conteo de sesiones de gimnasio
-                sesiones_gym = len(df_plot[df_plot['Gimnasio'] == "Sí"])
-                st.metric("Sesiones de Fuerza", sesiones_gym)
+                atleta_sel = st.sidebar.selectbox("Analizar Atleta:", ["Todos"] + list(df['Atleta'].unique()))
+                jornada_sel = st.sidebar.multiselect("Jornadas:", ["Mañana", "Tarde"], default=["Mañana", "Tarde"])
+                
+                df_plot = df[df['Jornada'].isin(jornada_sel)]
+                if atleta_sel != "Todos":
+                    df_plot = df_plot[df_plot['Atleta'] == atleta_sel]
 
-            st.write("---")
-            # Mostrar tabla de detalles de fuerza si existe un atleta seleccionado
-            if atleta_sel != "Todos" and sesiones_gym > 0:
-                with st.expander("Ver bitácora de Gimnasio/Fuerza"):
-                    st.table(df_plot[df_plot['Gimnasio'] == "Sí"][['Fecha', 'Jornada', 'Detalle_Gimnasio']])
+                # --- KPIs ---
+                k1, k2, k3 = st.columns(3)
+                with k1: st.metric("KM Totales", f"{df_plot['Distancia'].sum():.1f} km")
+                with k2: st.metric("Sesiones", len(df_plot))
+                with k3: 
+                    gym_count = len(df_plot[df_plot['Gimnasio'] == "Sí"])
+                    st.metric("Fuerza/Gym", gym_count)
 
-            fig_evol = px.line(df_plot, x='Fecha', y='Distancia', color='Jornada', markers=True, title="Progreso de Distancia")
-            st.plotly_chart(fig_evol, use_container_width=True)
+                # --- MEDALLERO ---
+                if atleta_sel != "Todos":
+                    st.divider()
+                    st.subheader(f"🏅 Logros de {atleta_sel}")
+                    tot_km = df_plot['Distancia'].sum()
+                    tot_ses = len(df_plot)
+                    
+                    m1, m2, m3, m4 = st.columns(4)
+                    with m1:
+                        if tot_ses >= 1: st.markdown("🥈 **Primera Zancada**\n\n*¡Activo!*")
+                        else: st.write("🔒 *Bloqueado*")
+                    with m2:
+                        if tot_ses >= 5: st.markdown("🔥 **Constancia**\n\n*5 sesiones*")
+                        else: st.caption(f"{tot_ses}/5 para 🔥")
+                    with m3:
+                        if tot_km >= 100: st.markdown("🚀 **Centurión**\n\n*100 KM*")
+                        else: st.caption(f"{tot_km:.1f}/100 para 🚀")
+                    with m4:
+                        if gym_count >= 10: st.markdown("💪 **Hércules**\n\n*10 de Fuerza*")
+                        else: st.caption(f"{gym_count}/10 para 💪")
 
-    except Exception as e:
-        st.error(f"Error al cargar el panel: {e}")
+                # --- GRÁFICAS ---
+                st.divider()
+                fig = px.line(df_plot, x='Fecha', y='Distancia', color='Jornada', markers=True, 
+                              title="Progreso de Kilometraje", template="plotly_white")
+                fig.update_traces(line_color='#2E7D32')
+                st.plotly_chart(fig, use_container_width=True)
+
+                # --- BITÁCORA DE GIMNASIO ---
+                if atleta_sel != "Todos" and gym_count > 0:
+                    with st.expander("Ver detalle de rutinas de fuerza"):
+                        st.table(df_plot[df_plot['Gimnasio'] == "Sí"][['Fecha', 'Jornada', 'Detalle_Gimnasio']])
+
+        except Exception as e:
+            st.error(f"Error: {e}")
+            
+    elif password == "":
+        st.warning("Ingresa la contraseña en el menú lateral para desbloquear las estadísticas.")
+    else:
+        st.error("Contraseña incorrecta.")
