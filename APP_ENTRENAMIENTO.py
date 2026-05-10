@@ -28,7 +28,6 @@ st.markdown("""
     html, body, [class*="css"]  {
         font-family: 'Montserrat', sans-serif;
     }
-    
     [data-testid="stSidebarNav"] { padding-top: 20px; }
     </style>
     """, unsafe_allow_html=True)
