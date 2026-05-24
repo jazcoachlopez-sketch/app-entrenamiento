@@ -105,4 +105,23 @@ if opcion == "📝 Registrar Entrenamiento":
             with cols[i % 4]:
                 t = st.text_input(f"Serie {i+1}", key=f"rep_{i}", placeholder="0:00")
                 series_tiempos.append(t)
-        st.write
+        st.write("---")
+
+    col_c, col_d = st.columns(2)
+    with col_c:
+        sensacion = st.selectbox("¿Cómo estuvo tu sensación física?", ["Excelente", "Bien", "Cansado", "Con Dolor"])
+    with col_d:
+        cumplimiento = st.radio("¿Cumpliste a cabalidad el objetivo?", ["Sí", "No"], horizontal=True)
+
+    st.write("---")
+    enviado = st.button("🚀 Guardar Entrenamiento")
+
+    if enviado:
+        if not atleta_input:
+            st.error("Por favor, ingresa tu nombre para procesar el registro.")
+        else:
+            fecha_str = fecha_input.strftime("%Y-%m-%d")
+            
+            mensajes_coach = {
+                "Excelente": f"¡Actitud de campeón! 🏆 ¡A seguir sumando en Corriendo Ando, {atleta_input}!",
+                "Bien": "¡Buen trabajo
