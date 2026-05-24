@@ -168,11 +168,11 @@ if opcion == "📝 Registrar Entrenamiento":
                 st.error(f"Error al intentar conectar: {e}")
 
 # ---------------------------------------------------------
-# OPCIÓN 2: MI PLAN SEMANAL (Visualización en CALENDARIO)
+# OPCIÓN 2: MI PLAN SEMANAL (Visualización en CALENDARIO PRIVADO)
 # ---------------------------------------------------------
 elif opcion == "📅 Mi Plan Semanal":
     st.markdown("<h1 class='main-title'>TU PLAN SEMANAL 📅</h1>", unsafe_allow_html=True)
-    st.info("Visualiza tu ruta de entrenamiento. Sigue el plan del Coach JAZ.")
+    st.info("Visualiza tu ruta de entrenamiento. Privacidad garantizada.")
 
     try:
         df_planes = conn.read(worksheet="Planes", ttl=0)
@@ -186,47 +186,67 @@ elif opcion == "📅 Mi Plan Semanal":
             atleta_plan = st.selectbox("Selecciona tu nombre:", [""] + list(lista_atletas))
 
             if atleta_plan:
-                st.write(f"### 🗓️ Calendario de: **{atleta_plan}**")
-                
                 df_mi_plan = df_planes[df_planes['Atleta'] == atleta_plan].copy()
-                df_mi_plan['Dia'] = df_mi_plan['Dia'].astype(str).str.strip().str.capitalize()
-                df_mi_plan['Jornada'] = df_mi_plan['Jornada'].astype(str).str.strip().str.capitalize()
                 
-                df_mi_plan['Dia'] = df_mi_plan['Dia'].replace({"Miercoles": "Miércoles", "Sabado": "Sábado"})
-                dias_semana = ["Lunes", "Martes", "Miércoles", "Jueves", "Viernes", "Sábado", "Domingo"]
-                
-                html_cal = """
-                <div style="overflow-x:auto; margin-top: 20px;">
-                <table style="width:100%; border-collapse: collapse; font-family: 'Montserrat', sans-serif; font-size: 0.95em; box-shadow: 0 4px 8px rgba(0,0,0,0.1);">
-                    <tr style="background-color: #2E7D32; color: white; text-align: center;">
-                        <th style="padding: 12px; border: 1px solid #ddd; width: 10%;">Jornada</th>
-                """
-                for dia in dias_semana:
-                    html_cal += f"<th style='padding: 12px; border: 1px solid #ddd; min-width: 140px; text-align: center;'>{dia}</th>"
-                html_cal += "</tr>"
-
-                html_cal += "<tr><td style='padding: 12px; border: 1px solid #ddd; font-weight: bold; background-color: #f9f9f9; text-align: center;'>🌅 Mañana</td>"
-                for dia in dias_semana:
-                    plan_m = df_mi_plan[(df_mi_plan['Dia'] == dia) & (df_mi_plan['Jornada'] == "Mañana")]
-                    if not plan_m.empty and str(plan_m.iloc[0]['Entrenamiento']).strip().lower() not in ['nan', '']:
-                        texto = str(plan_m.iloc[0]['Entrenamiento']).replace("\n", "<br>")
-                        html_cal += f"<td style='padding: 12px; border: 1px solid #ddd; background-color: #e8f5e9;'>{texto}</td>"
+                # Verificamos si el Coach creó la columna 'Codigo'
+                if 'Codigo' not in df_mi_plan.columns:
+                    st.error("⚠️ Coach: Para usar esta función, debes agregar una columna llamada 'Codigo' en tu pestaña 'Planes' de Google Sheets.")
+                else:
+                    # Extraemos los códigos válidos que haya puesto el Coach para este atleta
+                    codigos_validos = [str(c).strip() for c in df_mi_plan['Codigo'].unique() if str(c).lower() not in ['nan', 'none', '']]
+                    
+                    if not codigos_validos:
+                        st.warning(f"Coach, no le has asignado un código a {atleta_plan} en Google Sheets.")
                     else:
-                        html_cal += "<td style='padding: 12px; border: 1px solid #ddd; background-color: #ffffff; color: #888; text-align: center;'><i>🛋️ Libre</i></td>"
-                html_cal += "</tr>"
+                        codigo_real = codigos_validos[0] # Toma el primer código que encuentre
+                        
+                        # Cuadro de contraseña para el atleta
+                        codigo_input = st.text_input("🔑 Ingresa tu código de acceso:", type="password")
+                        
+                        if codigo_input == codigo_real:
+                            st.success("Acceso concedido.")
+                            st.write(f"### 🗓️ Calendario de: **{atleta_plan}**")
+                            
+                            df_mi_plan['Dia'] = df_mi_plan['Dia'].astype(str).str.strip().str.capitalize()
+                            df_mi_plan['Jornada'] = df_mi_plan['Jornada'].astype(str).str.strip().str.capitalize()
+                            df_mi_plan['Dia'] = df_mi_plan['Dia'].replace({"Miercoles": "Miércoles", "Sabado": "Sábado"})
+                            dias_semana = ["Lunes", "Martes", "Miércoles", "Jueves", "Viernes", "Sábado", "Domingo"]
+                            
+                            html_cal = """
+                            <div style="overflow-x:auto; margin-top: 10px;">
+                            <table style="width:100%; border-collapse: collapse; font-family: 'Montserrat', sans-serif; font-size: 0.95em; box-shadow: 0 4px 8px rgba(0,0,0,0.1);">
+                                <tr style="background-color: #2E7D32; color: white; text-align: center;">
+                                    <th style="padding: 12px; border: 1px solid #ddd; width: 10%;">Jornada</th>
+                            """
+                            for dia in dias_semana:
+                                html_cal += f"<th style='padding: 12px; border: 1px solid #ddd; min-width: 140px; text-align: center;'>{dia}</th>"
+                            html_cal += "</tr>"
 
-                html_cal += "<tr><td style='padding: 12px; border: 1px solid #ddd; font-weight: bold; background-color: #f9f9f9; text-align: center;'>🌇 Tarde</td>"
-                for dia in dias_semana:
-                    plan_t = df_mi_plan[(df_mi_plan['Dia'] == dia) & (df_mi_plan['Jornada'] == "Tarde")]
-                    if not plan_t.empty and str(plan_t.iloc[0]['Entrenamiento']).strip().lower() not in ['nan', '']:
-                        texto = str(plan_t.iloc[0]['Entrenamiento']).replace("\n", "<br>")
-                        html_cal += f"<td style='padding: 12px; border: 1px solid #ddd; background-color: #e3f2fd;'>{texto}</td>"
-                    else:
-                        html_cal += "<td style='padding: 12px; border: 1px solid #ddd; background-color: #ffffff; color: #888; text-align: center;'><i>🛋️ Libre</i></td>"
-                html_cal += "</tr>"
+                            html_cal += "<tr><td style='padding: 12px; border: 1px solid #ddd; font-weight: bold; background-color: #f9f9f9; text-align: center;'>🌅 Mañana</td>"
+                            for dia in dias_semana:
+                                plan_m = df_mi_plan[(df_mi_plan['Dia'] == dia) & (df_mi_plan['Jornada'] == "Mañana")]
+                                if not plan_m.empty and str(plan_m.iloc[0]['Entrenamiento']).strip().lower() not in ['nan', '']:
+                                    texto = str(plan_m.iloc[0]['Entrenamiento']).replace("\n", "<br>")
+                                    html_cal += f"<td style='padding: 12px; border: 1px solid #ddd; background-color: #e8f5e9;'>{texto}</td>"
+                                else:
+                                    html_cal += "<td style='padding: 12px; border: 1px solid #ddd; background-color: #ffffff; color: #888; text-align: center;'><i>🛋️ Libre</i></td>"
+                            html_cal += "</tr>"
 
-                html_cal += "</table></div>"
-                st.markdown(html_cal, unsafe_allow_html=True)
+                            html_cal += "<tr><td style='padding: 12px; border: 1px solid #ddd; font-weight: bold; background-color: #f9f9f9; text-align: center;'>🌇 Tarde</td>"
+                            for dia in dias_semana:
+                                plan_t = df_mi_plan[(df_mi_plan['Dia'] == dia) & (df_mi_plan['Jornada'] == "Tarde")]
+                                if not plan_t.empty and str(plan_t.iloc[0]['Entrenamiento']).strip().lower() not in ['nan', '']:
+                                    texto = str(plan_t.iloc[0]['Entrenamiento']).replace("\n", "<br>")
+                                    html_cal += f"<td style='padding: 12px; border: 1px solid #ddd; background-color: #e3f2fd;'>{texto}</td>"
+                                else:
+                                    html_cal += "<td style='padding: 12px; border: 1px solid #ddd; background-color: #ffffff; color: #888; text-align: center;'><i>🛋️ Libre</i></td>"
+                            html_cal += "</tr>"
+
+                            html_cal += "</table></div>"
+                            st.markdown(html_cal, unsafe_allow_html=True)
+                            
+                        elif codigo_input != "":
+                            st.error("❌ Código incorrecto. Verifica la información.")
                 
     except Exception as e:
         st.error(f"Error técnico al leer la planificación: {e}")
