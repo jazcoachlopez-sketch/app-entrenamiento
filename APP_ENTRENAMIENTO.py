@@ -202,6 +202,7 @@ elif opcion == "📅 Mi Plan Semanal":
                         
                         # Cuadro de contraseña para el atleta
                         codigo_input = st.text_input("🔑 Ingresa tu código de acceso:", type="password")
+                        st.write(f"Códigos detectados en la base de datos: {codigos_validos}")
                         
                         if codigo_input == codigo_real:
                             st.success("Acceso concedido.")
