@@ -63,10 +63,8 @@ with st.sidebar:
 if opcion == "📝 Registrar Entrenamiento":
     st.markdown("<h1 class='main-title'>¡BIENVENIDO, ATLETA! ⚡</h1>", unsafe_allow_html=True)
     
-    st.info("""
-    **"La disciplina de hoy es tu victoria de mañana."** Registra tu sesión en **Corriendo Ando**. 
-    Detalla tu trabajo de fuerza y las series asignadas. ¡Vamos con toda! 🏃🏽‍♂️💨
-    """)
+    st.info("La disciplina de hoy es tu victoria de mañana. Registra tu sesión en Corriendo Ando. "
+            "Detalla tu trabajo de fuerza y las series asignadas. ¡Vamos con toda! 🏃🏽‍♂️💨")
     
     st.subheader("Formulario de Seguimiento")
     st.write("---")
@@ -99,4 +97,27 @@ if opcion == "📝 Registrar Entrenamiento":
 
     if hubo_series:
         st.markdown("### ⏱️ Series de Velocidad")
-        tipo_velocidad = st.text_input("Tipo de trabajo asignado:",
+        # Aquí es donde estaba el error, lo he puesto en formato seguro:
+        tipo_velocidad = st.text_input(
+            "Tipo de trabajo asignado:", 
+            placeholder="Ej: 10x400m, Cuestas explosivas..."
+        )
+        
+        num_rep = st.slider("Número de repeticiones realizadas", 1, 12, 5)
+        cols = st.columns(4)
+        for i in range(num_rep):
+            with cols[i % 4]:
+                t = st.text_input(f"Serie {i+1}", key=f"rep_{i}", placeholder="0:00")
+                series_tiempos.append(t)
+        st.write("---")
+
+    col_c, col_d = st.columns(2)
+    with col_c:
+        sensacion = st.selectbox("¿Cómo estuvo tu sensación física?", ["Excelente", "Bien", "Cansado", "Con Dolor"])
+    with col_d:
+        cumplimiento = st.radio("¿Cumpliste a cabalidad el objetivo?", ["Sí", "No"], horizontal=True)
+
+    st.write("---")
+    enviado = st.button("🚀 Guardar Entrenamiento")
+
+    if enviado:
