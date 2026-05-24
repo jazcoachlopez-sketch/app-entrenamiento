@@ -73,10 +73,11 @@ if opcion == "📝 Registrar Entrenamiento":
         except Exception as e: st.error(e)
 
 # ---------------------------------------------------------
-# OPCIÓN 2: MI PLAN SEMANAL (CALENDARIO CON FECHA)
+# OPCIÓN 2: MI PLAN SEMANAL (Visualización Completa)
 # ---------------------------------------------------------
 elif opcion == "📅 Mi Plan Semanal":
     st.markdown("<h1 class='main-title'>TU PLAN SEMANAL 📅</h1>", unsafe_allow_html=True)
+    
     try:
         df_planes = conn.read(worksheet="Planes", ttl=0)
         lista_atletas = [a for a in df_planes['Atleta'].unique() if str(a).lower() != 'nan' and str(a).strip() != '']
@@ -88,11 +89,24 @@ elif opcion == "📅 Mi Plan Semanal":
             codigo_input = st.text_input("🔑 Ingresa tu código:", type="password")
             
             if codigo_input and codigo_input.strip() == codigo_real:
+                st.success("Acceso concedido.")
+                
+                # --- NUEVA INFO: CABECERA DEL PLAN ---
+                # Extraemos la información asumiendo que es la misma para todas las filas del atleta
+                comp = df_mi_plan['Proxima_Competencia'].iloc[0] if 'Proxima_Competencia' in df_mi_plan.columns else "No definida"
+                obj = df_mi_plan['Objetivo_Plan'].iloc[0] if 'Objetivo_Plan' in df_mi_plan.columns else "No definido"
+                obs = df_mi_plan['Observacion_Coach'].iloc[0] if 'Observacion_Coach' in df_mi_plan.columns else "Sin observaciones por ahora."
+
+                col1, col2 = st.columns(2)
+                col1.info(f"🏆 **Próxima Competencia:** {comp}")
+                col2.info(f"🎯 **Objetivo del Plan:** {obj}")
+                
                 st.write(f"### 🗓️ Calendario de: **{atleta_plan}**")
+                
+                # --- CALENDARIO ---
                 df_mi_plan['Dia'] = df_mi_plan['Dia'].astype(str).str.strip().str.capitalize()
                 dias_semana = ["Lunes", "Martes", "Miércoles", "Jueves", "Viernes", "Sábado", "Domingo"]
                 
-                # Construcción del Calendario con Fecha
                 html_cal = """
                 <div style="overflow-x:auto; margin-top: 10px;">
                 <table style="width:100%; border-collapse: collapse; font-family: 'Montserrat', sans-serif; font-size: 0.9em; box-shadow: 0 4px 8px rgba(0,0,0,0.1);">
@@ -111,12 +125,18 @@ elif opcion == "📅 Mi Plan Semanal":
                             texto = str(plan.iloc[0]['Entrenamiento']).replace("\n", "<br>")
                             html_cal += f"<td style='padding: 12px; border: 1px solid #ddd; background-color: #f1f8e9;'><b>{fecha_val}</b><br>{texto}</td>"
                         else:
-                            html_cal += "<td style='padding: 12px; border: 1px solid #ddd; color: #888; text-align: center;'><i>Libre</i></td>"
+                            html_cal += "<td style='padding: 12px; border: 1px solid #ddd; color: #888; text-align: center;'><i>-</i></td>"
                     html_cal += "</tr>"
                 html_cal += "</table></div>"
                 st.markdown(html_cal, unsafe_allow_html=True)
+                
+                # --- NUEVA INFO: OBSERVACIÓN COACH ---
+                st.markdown("---")
+                st.subheader("📝 Observaciones del Coach")
+                st.warning(obs)
+                
             elif codigo_input: st.error("❌ Código incorrecto.")
-    except Exception as e: st.error(f"Error: {e}")
+    except Exception as e: st.error(f"Error cargando el plan: {e}")
 
 # ---------------------------------------------------------
 # OPCIÓN 3: PANEL DE CONTROL
