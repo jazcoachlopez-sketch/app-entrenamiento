@@ -101,7 +101,12 @@ if opcion == "📝 Registrar Entrenamiento":
                     nuevo_reg[f"Serie_{i+1}"] = [tiempos_series[i] if i < len(tiempos_series) else ""]
                     
                 existente = conn.read(ttl=0)
-                conn.update(data=pd.concat([existente, pd.DataFrame(nuevo_reg)], ignore_index=True))
+                if not existente.empty:
+                    # UNIFICACIÓN DE CABECERAS: Evita duplicar columnas con espacios/guiones
+                    existente.columns = existente.columns.astype(str).str.strip().str.replace(" ", "_")
+                    
+                df_final = pd.concat([existente, pd.DataFrame(nuevo_reg)], ignore_index=True)
+                conn.update(data=df_final)
                 st.success("¡Entrenamiento guardado con éxito!")
                 st.rerun()
             except Exception as e: 
@@ -114,6 +119,9 @@ elif opcion == "📅 Mi Plan Semanal":
     st.markdown("<h1 class='main-title'>TU PLAN SEMANAL 📅</h1>", unsafe_allow_html=True)
     try:
         df_planes = conn.read(worksheet="Planes", ttl=0)
+        if not df_planes.empty:
+            df_planes.columns = df_planes.columns.astype(str).str.strip().str.replace(" ", "_")
+            
         lista_atletas = [a for a in df_planes['Atleta'].unique() if str(a).lower() != 'nan' and str(a).strip() != '']
         atleta_plan = st.selectbox("Selecciona tu nombre:", [""] + list(lista_atletas))
 
@@ -125,10 +133,14 @@ elif opcion == "📅 Mi Plan Semanal":
             if codigo_input and codigo_input.strip() == codigo_real:
                 st.success("Acceso concedido.")
                 
-                # Cabecera informativa
-                c1, c2 = st.columns(2)
-                c1.info(f"🏆 **Competencia:** {df_mi['Proxima_Competencia'].iloc[0]}")
-                c2.info(f"🎯 **Objetivo:** {df_mi['Objetivo_Plan'].iloc[0]}")
+                # Cabecera informativa resguardada
+                comp = df_mi['Proxima_Competencia'].iloc[0] if 'Proxima_Competencia' in df_mi.columns else "No definida"
+                obj = df_mi['Objetivo_Plan'].iloc[0] if 'Objetivo_Plan' in df_mi.columns else "No definido"
+                obs = df_mi['Observacion_Coach'].iloc[0] if 'Observacion_Coach' in df_mi.columns else "Sin observaciones."
+                
+                col1, col2 = st.columns(2)
+                col1.info(f"🏆 **Competencia:** {comp}")
+                col2.info(f"🎯 **Objetivo:** {obj}")
                 
                 st.write(f"### 🗓️ Calendario de: **{atleta_plan}**")
                 df_mi['Dia'] = df_mi['Dia'].astype(str).str.strip().str.capitalize()
@@ -148,7 +160,9 @@ elif opcion == "📅 Mi Plan Semanal":
                     for dia in dias_semana:
                         plan = df_mi[(df_mi['Dia'] == dia) & (df_mi['Jornada'] == j)]
                         if not plan.empty:
-                            html_cal += f"<td style='padding: 12px; border: 1px solid #ddd; background-color: #e8f5e9;'><b>{plan.iloc[0]['Fecha']}</b><br>{plan.iloc[0]['Entrenamiento']}</td>"
+                            f_val = plan.iloc[0]['Fecha'] if 'Fecha' in plan.columns else ""
+                            e_val = plan.iloc[0]['Entrenamiento'] if 'Entrenamiento' in plan.columns else ""
+                            html_cal += f"<td style='padding: 12px; border: 1px solid #ddd; background-color: #e8f5e9;'><b>{f_val}</b><br>{e_val}</td>"
                         else: html_cal += "<td style='padding: 12px; border: 1px solid #ddd; background-color: #ffffff; color: #888; text-align: center;'><i>🛋️ Libre</i></td>"
                     html_cal += "</tr>"
                 html_cal += "</table></div>"
@@ -156,30 +170,41 @@ elif opcion == "📅 Mi Plan Semanal":
                 
                 st.markdown("---")
                 st.subheader("📝 Observaciones del Coach")
-                st.warning(df_mi['Observacion_Coach'].iloc[0])
+                st.warning(obs)
 
-                # HISTORIAL DE RESULTADOS (ORGANIZADO CON EL TIPO DE ENTRENAMIENTO AL PRINCIPIO)
+                # HISTORIAL DE RESULTADOS SEGURO
                 st.divider()
                 st.subheader("📈 Tus Resultados Registrados")
                 df_hist = conn.read(ttl=0)
                 
                 if not df_hist.empty:
+                    # Estandarizamos las columnas leídas para forzar la coincidencia exacta
+                    df_hist.columns = df_hist.columns.astype(str).str.strip().str.replace(" ", "_")
                     df_filtro = df_hist[df_hist['Atleta'].astype(str).str.strip() == atleta_plan.strip()].copy()
                     
                     if not df_filtro.empty:
-                        # Estructuramos el orden visual de las columnas para destacar el Tipo de Entrenamiento
-                        columnas_ordenadas = ["Fecha", "Jornada", "Tipo_Entrenamiento", "Distancia", "Tiempo", "Promedio_Ritmo"]
+                        columnas_principales = ["Fecha", "Jornada", "Tipo_Entrenamiento", "Distancia", "Tiempo", "Promedio_Ritmo"]
                         columnas_series = [f"Serie_{i}" for i in range(1, 21)]
                         
-                        # Combinamos solo las que existan en la hoja de cálculo para evitar fallos
-                        columnas_finales = [c for c in columnas_ordenadas if c in df_filtro.columns] + [s for s in columnas_series if s in df_filtro.columns]
-                        
+                        # Si alguna columna no existe en registros viejos, se genera vacía para que no rompa la vista
+                        for col in columnas_principales:
+                            if col not in df_filtro.columns: df_filtro[col] = ""
+                        for col in columnas_series:
+                            if col not in df_filtro.columns: df_filtro[col] = ""
+                                
+                        columnas_finales = columnas_principales + columnas_series
                         df_ordenado = df_filtro[columnas_finales].sort_values(by="Fecha", ascending=False)
-                        st.dataframe(df_ordenado, use_container_width=True)
-                    else:
-                        st.info("Aún no tienes entrenamientos registrados.")
-                else:
-                    st.info("No se registran datos en la base de datos principal.")
+                        
+                        # Renombramos estéticamente en la interfaz
+                        df_visual = df_ordenado.rename(columns={
+                            "Tipo_Entrenamiento": "Tipo de Entrenamiento",
+                            "Promedio_Ritmo": "Ritmo Promedio",
+                            "Distancia": "Distancia (km)",
+                            "Tiempo": "Tiempo Total"
+                        })
+                        st.dataframe(df_visual, use_container_width=True)
+                    else: st.info("Aún no tienes entrenamientos registrados.")
+                else: st.info("No se registran datos en la base de datos principal.")
                     
             elif codigo_input: st.error("❌ Código incorrecto.")
     except Exception as e: st.error(f"Error técnico: {e}")
