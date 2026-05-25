@@ -239,4 +239,46 @@ elif opcion == "📅 Mi Plan Semanal":
                             if col not in df_filtro.columns: df_filtro[col] = ""
                                 
                         columnas_finales = columnas_principales + columnas_series
-                        df_ordenado = df_filtro
+                        df_ordenado = df_filtro[columnas_finales].sort_values(by="Fecha", ascending=False)
+                        
+                        df_visual = df_ordenado.rename(columns={
+                            "Tipo_Entrenamiento": "Tipo de Entrenamiento",
+                            "Promedio_Ritmo": "Ritmo Promedio",
+                            "Distancia": "Distancia (km)",
+                            "Tiempo": "Tiempo Total"
+                        })
+                        st.dataframe(df_visual, use_container_width=True)
+                    else: st.info("Aún no tienes entrenamientos registrados.")
+                else: st.info("No se registran datos en la base de datos principal.")
+                    
+            elif codigo_input: st.error("❌ Código incorrecto.")
+    except Exception as e: st.error(f"Error técnico: {e}")
+
+# ---------------------------------------------------------
+# OPCIÓN 3: PANEL DE CONTROL
+# ---------------------------------------------------------
+else:
+    st.markdown("<h1 class='main-title'>ÁREA RESTRINGIDA</h1>", unsafe_allow_html=True)
+    st.sidebar.divider()
+    st.sidebar.subheader("🔐 Acceso Entrenador")
+    password = st.sidebar.text_input("Llave Maestra:", type="password")
+
+    if password == "CoachJaz2026":
+        st.success("Acceso concedido.")
+        st.markdown("<h1 class='main-title'>CORRIENDO ANDO - ESTRATEGIA</h1>", unsafe_allow_html=True)
+        st.write("---")
+        try:
+            df = conn.read(ttl=0)
+            if df.empty: st.info("No se registran datos.")
+            else:
+                df['Fecha'] = pd.to_datetime(df['Fecha'])
+                atleta_sel = st.sidebar.selectbox("Seleccionar Atleta:", ["Todos"] + list(df['Atleta'].unique()))
+                if atleta_sel != "Todos": df = df[df['Atleta'] == atleta_sel]
+
+                c1, c2 = st.columns(2)
+                c1.metric("Kilómetros Acumulados", f"{df['Distancia'].sum():.1f} km")
+                c2.metric("Sesiones", len(df))
+                
+                st.plotly_chart(px.line(df, x='Fecha', y='Distancia', color='Atleta', title="Curva de Volumen", template="plotly_white"), use_container_width=True)
+                st.table(df)
+        except Exception as e: st.error(f"Error técnico: {e}")
