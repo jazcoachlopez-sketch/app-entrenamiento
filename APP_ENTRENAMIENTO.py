@@ -65,13 +65,10 @@ if opcion == "📝 Registrar Entrenamiento":
         jornada = st.radio("Jornada:", ["Mañana", "Tarde"], horizontal=True)
     with col_b:
         distancia = st.number_input("Distancia Real Alcanzada (km)", min_value=0.0, step=0.1)
-        tiempo = st.text_input("Tiempo Total (HH:MM:SS)")
+        tiempo = st.text_input("Tiempo Total (HH:MM:SS)", placeholder="ej: 00:45:30")
 
     st.markdown("### ⏱️ Series de Velocidad")
-    
-    # NUEVO ESPACIO: Se solicita el tipo de trabajo antes de las repeticiones
     tipo_entrenamiento_input = st.text_input("Tipo de Entrenamiento (ej: 10x400m, Cuestas explosivas, Fartlek):")
-    
     num_rep = st.slider("Número de repeticiones", 1, 20, 5)
     
     cols = st.columns(4)
@@ -100,7 +97,6 @@ if opcion == "📝 Registrar Entrenamiento":
                     "Tipo_Entrenamiento": [tipo_entrenamiento_input], 
                     "Promedio_Ritmo": [sec_to_time(prom_val)]
                 }
-                # Mapeo automático de hasta 20 series
                 for i in range(20):
                     nuevo_reg[f"Serie_{i+1}"] = [tiempos_series[i] if i < len(tiempos_series) else ""]
                     
@@ -128,6 +124,7 @@ elif opcion == "📅 Mi Plan Semanal":
             
             if codigo_input and codigo_input.strip() == codigo_real:
                 st.success("Acceso concedido.")
+                
                 # Cabecera informativa
                 c1, c2 = st.columns(2)
                 c1.info(f"🏆 **Competencia:** {df_mi['Proxima_Competencia'].iloc[0]}")
@@ -161,14 +158,29 @@ elif opcion == "📅 Mi Plan Semanal":
                 st.subheader("📝 Observaciones del Coach")
                 st.warning(df_mi['Observacion_Coach'].iloc[0])
 
-                # HISTORIAL DE RESULTADOS
+                # HISTORIAL DE RESULTADOS (ORGANIZADO CON EL TIPO DE ENTRENAMIENTO AL PRINCIPIO)
                 st.divider()
                 st.subheader("📈 Tus Resultados Registrados")
                 df_hist = conn.read(ttl=0)
-                df_filtro = df_hist[df_hist['Atleta'].astype(str).str.strip() == atleta_plan.strip()]
-                if not df_filtro.empty:
-                    st.dataframe(df_filtro.sort_values(by="Fecha", ascending=False), use_container_width=True)
-                else: st.info("Aún no tienes registros.")
+                
+                if not df_hist.empty:
+                    df_filtro = df_hist[df_hist['Atleta'].astype(str).str.strip() == atleta_plan.strip()].copy()
+                    
+                    if not df_filtro.empty:
+                        # Estructuramos el orden visual de las columnas para destacar el Tipo de Entrenamiento
+                        columnas_ordenadas = ["Fecha", "Jornada", "Tipo_Entrenamiento", "Distancia", "Tiempo", "Promedio_Ritmo"]
+                        columnas_series = [f"Serie_{i}" for i in range(1, 21)]
+                        
+                        # Combinamos solo las que existan en la hoja de cálculo para evitar fallos
+                        columnas_finales = [c for c in columnas_ordenadas if c in df_filtro.columns] + [s for s in columnas_series if s in df_filtro.columns]
+                        
+                        df_ordenado = df_filtro[columnas_finales].sort_values(by="Fecha", ascending=False)
+                        st.dataframe(df_ordenado, use_container_width=True)
+                    else:
+                        st.info("Aún no tienes entrenamientos registrados.")
+                else:
+                    st.info("No se registran datos en la base de datos principal.")
+                    
             elif codigo_input: st.error("❌ Código incorrecto.")
     except Exception as e: st.error(f"Error técnico: {e}")
 
