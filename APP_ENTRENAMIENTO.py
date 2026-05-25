@@ -57,10 +57,26 @@ with st.sidebar:
 # ---------------------------------------------------------
 if opcion == "📝 Registrar Entrenamiento":
     st.markdown("<h1 class='main-title'>¡BIENVENIDO, ATLETA! ⚡</h1>", unsafe_allow_html=True)
+    st.info("La disciplina de hoy es tu victoria de mañana. Registra tu sesión en Corriendo Ando. ¡Vamos con toda! 🏃🏽‍♂️💨")
     
+    st.subheader("Formulario de Seguimiento")
+    st.write("---")
+
+    # Extraemos la lista oficial de atletas desde la pestaña "Planes" para evitar nombres diferentes
+    lista_atletas_roster = []
+    try:
+        df_roster_check = conn.read(worksheet="Planes", ttl=0)
+        if not df_roster_check.empty:
+            df_roster_check.columns = df_roster_check.columns.astype(str).str.strip().str.replace(" ", "_")
+            if 'Atleta' in df_roster_check.columns:
+                lista_atletas_roster = [a for a in df_roster_check['Atleta'].unique() if str(a).lower() != 'nan' and str(a).strip() != '']
+    except:
+        pass
+
     col_a, col_b = st.columns(2)
     with col_a:
-        atleta_input = st.text_input("Nombre del Atleta")
+        # CAMBIO CLAVE: Lista desplegable estricta en lugar de entrada de texto libre
+        atleta_input = st.selectbox("Selecciona tu Nombre:", [""] + sorted(list(lista_atletas_roster)))
         fecha_input = st.date_input("Fecha", date.today())
         jornada = st.radio("Jornada:", ["Mañana", "Tarde"], horizontal=True)
     with col_b:
@@ -84,8 +100,8 @@ if opcion == "📝 Registrar Entrenamiento":
         st.info(f"⚡ **Promedio de ritmo:** {sec_to_time(prom_val)} min/rep")
 
     if st.button("🚀 Guardar Entrenamiento"):
-        if not atleta_input:
-            st.error("Por favor, ingresa tu nombre.")
+        if not atleta_input or atleta_input == "":
+            st.error("❌ Por favor, selecciona tu nombre de la lista desplegable antes de guardar.")
         else:
             try:
                 nuevo_reg = {
@@ -102,7 +118,6 @@ if opcion == "📝 Registrar Entrenamiento":
                     
                 existente = conn.read(ttl=0)
                 if not existente.empty:
-                    # UNIFICACIÓN DE CABECERAS: Evita duplicar columnas con espacios/guiones
                     existente.columns = existente.columns.astype(str).str.strip().str.replace(" ", "_")
                     
                 df_final = pd.concat([existente, pd.DataFrame(nuevo_reg)], ignore_index=True)
@@ -133,7 +148,6 @@ elif opcion == "📅 Mi Plan Semanal":
             if codigo_input and codigo_input.strip() == codigo_real:
                 st.success("Acceso concedido.")
                 
-                # Cabecera informativa resguardada
                 comp = df_mi['Proxima_Competencia'].iloc[0] if 'Proxima_Competencia' in df_mi.columns else "No definida"
                 obj = df_mi['Objetivo_Plan'].iloc[0] if 'Objetivo_Plan' in df_mi.columns else "No definido"
                 obs = df_mi['Observacion_Coach'].iloc[0] if 'Observacion_Coach' in df_mi.columns else "Sin observaciones."
@@ -178,7 +192,6 @@ elif opcion == "📅 Mi Plan Semanal":
                 df_hist = conn.read(ttl=0)
                 
                 if not df_hist.empty:
-                    # Estandarizamos las columnas leídas para forzar la coincidencia exacta
                     df_hist.columns = df_hist.columns.astype(str).str.strip().str.replace(" ", "_")
                     df_filtro = df_hist[df_hist['Atleta'].astype(str).str.strip() == atleta_plan.strip()].copy()
                     
@@ -186,7 +199,6 @@ elif opcion == "📅 Mi Plan Semanal":
                         columnas_principales = ["Fecha", "Jornada", "Tipo_Entrenamiento", "Distancia", "Tiempo", "Promedio_Ritmo"]
                         columnas_series = [f"Serie_{i}" for i in range(1, 21)]
                         
-                        # Si alguna columna no existe en registros viejos, se genera vacía para que no rompa la vista
                         for col in columnas_principales:
                             if col not in df_filtro.columns: df_filtro[col] = ""
                         for col in columnas_series:
@@ -195,7 +207,6 @@ elif opcion == "📅 Mi Plan Semanal":
                         columnas_finales = columnas_principales + columnas_series
                         df_ordenado = df_filtro[columnas_finales].sort_values(by="Fecha", ascending=False)
                         
-                        # Renombramos estéticamente en la interfaz
                         df_visual = df_ordenado.rename(columns={
                             "Tipo_Entrenamiento": "Tipo de Entrenamiento",
                             "Promedio_Ritmo": "Ritmo Promedio",
