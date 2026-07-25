@@ -101,7 +101,7 @@ if opcion == "📝 Registrar Entrenamiento":
     st.write("---")
 
     # SECCIÓN 3: TRABAJOS DE VELOCIDAD
-    st.markdown("### ⏱️ Series de Velocidad (Si aplica)")
+    st.markdown("### ⏱️ Nùmero de Kilometros (Fondo) o Series de Velocidad")
     tipo_entrenamiento_input = st.text_input("Tipo de Entrenamiento (ej: 10x400m, Cuestas explosivas, Fartlek):", placeholder="Deja vacío si sólo realizaste fondo continuo")
     num_rep = st.slider("Número de repeticiones realizadas", 1, 20, 5)
     
