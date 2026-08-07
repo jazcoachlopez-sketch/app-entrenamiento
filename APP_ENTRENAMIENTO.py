@@ -15,7 +15,7 @@ st.set_page_config(
 # --- 2. ESTILO CSS PERSONALIZADO ---
 st.markdown("""
     <style>
-    @import url('https://fonts.googleapis.com/css2?family=Archivo+Black&family=Montserrat:wght=400;700&display=swap');
+    @import url('https://fonts.googleapis.com/css2?family=Archivo+Black&family=Montserrat:wght@400;700&display=swap');
     .main-title { font-family: 'Archivo Black', sans-serif; color: #2E7D32; font-size: 3rem !important; text-align: center; margin-bottom: 0; }
     html, body, [class*="css"] { font-family: 'Montserrat', sans-serif; }
     [data-testid="stSidebarNav"] { padding-top: 20px; }
@@ -28,9 +28,14 @@ conn = st.connection("gsheets", type=GSheetsConnection)
 # --- FUNCIONES AUXILIARES ---
 def time_to_sec(t_str):
     try:
-        if ':' in t_str:
-            m, s = map(int, t_str.split(':'))
-            return m * 60 + s
+        if ':' in str(t_str):
+            parts = str(t_str).split(':')
+            if len(parts) == 2:
+                m, s = map(int, parts)
+                return m * 60 + s
+            elif len(parts) == 3:
+                h, m, s = map(int, parts)
+                return h * 3600 + m * 60 + s
         return int(t_str)
     except: return 0
 
@@ -64,7 +69,7 @@ with st.sidebar:
 # ---------------------------------------------------------
 if opcion == "📝 Registrar Entrenamiento":
     st.markdown("<h1 class='main-title'>¡BIENVENIDO, ATLETA! ⚡</h1>", unsafe_allow_html=True)
-    st.info("La disciplina de hoy es tu victoria de mañana. Registra tu sesión en Corriendo Ando. ¡Vamos con toda! 跑")
+    st.info("La disciplina de hoy es tu victoria de mañana. Registra tu sesión en Corriendo Ando. ¡Vamos con toda! 🏃🏽‍♂️💨")
     
     st.subheader("Formulario de Seguimiento")
     st.write("---")
@@ -90,7 +95,7 @@ if opcion == "📝 Registrar Entrenamiento":
 
     st.write("---")
 
-    # SECCIÓN 2: TRABAJOS DE FONDO / RESISTENCIA (ABAJO DE DATOS BASE)
+    # SECCIÓN 2: TRABAJOS DE FONDO / RESISTENCIA
     st.markdown("### 🏃‍♂️ Trabajo de Fondo / Resistencia")
     col_fondo1, col_fondo2 = st.columns(2)
     with col_fondo1:
@@ -101,7 +106,7 @@ if opcion == "📝 Registrar Entrenamiento":
     st.write("---")
 
     # SECCIÓN 3: TRABAJOS DE VELOCIDAD
-    st.markdown("### ⏱️ Numero de Kilometros (Fondo) o Series de Velocidad")
+    st.markdown("### ⏱️ Series de Velocidad (Si aplica)")
     tipo_entrenamiento_input = st.text_input("Tipo de Entrenamiento (ej: 10x400m, Cuestas explosivas, Fartlek):", placeholder="Deja vacío si sólo realizaste fondo continuo")
     num_rep = st.slider("Número de repeticiones realizadas", 1, 30, 5)
     
@@ -223,75 +228,4 @@ elif opcion == "📅 Mi Plan Semanal":
                         if not plan.empty:
                             f_val = plan.iloc[0]['Fecha'] if 'Fecha' in plan.columns else ""
                             e_val = plan.iloc[0]['Entrenamiento'] if 'Entrenamiento' in plan.columns else ""
-                            html_cal += f"<td style='padding: 12px; border: 1px solid #ddd; background-color: #e8f5e9;'><b>{f_val}</b><br>{e_val}</td>"
-                        else: html_cal += "<td style='padding: 12px; border: 1px solid #ddd; background-color: #ffffff; color: #888; text-align: center;'><i>🛋️ Libre</i></td>"
-                    html_cal += "</tr>"
-                html_cal += "</table></div>"
-                st.markdown(html_cal, unsafe_allow_html=True)
-                
-                st.markdown("---")
-                st.subheader("📝 Observaciones del Coach")
-                st.warning(obs)
-
-                # HISTORIAL DE RESULTADOS SEGURO
-                st.divider()
-                st.subheader("📈 Tus Resultados Registrados")
-                df_hist = conn.read(ttl=0)
-                
-                if not df_hist.empty:
-                    df_hist.columns = df_hist.columns.astype(str).str.strip().str.replace(" ", "_")
-                    df_filtro = df_hist[df_hist['Atleta'].astype(str).str.strip() == atleta_plan.strip()].copy()
-                    
-                    if not df_filtro.empty:
-                        columnas_principales = ["Fecha", "Jornada", "Tipo_Entrenamiento", "Distancia", "Tiempo", "Promedio_Ritmo"]
-                        columnas_series = [f"Serie_{i}" for i in range(1, 21)]
-                        
-                        for col in columnas_principales:
-                            if col not in df_filtro.columns: df_filtro[col] = ""
-                        for col in columnas_series:
-                            if col not in df_filtro.columns: df_filtro[col] = ""
-                                
-                        columnas_finales = columnas_principales + columnas_series
-                        df_ordenado = df_filtro[columnas_finales].sort_values(by="Fecha", ascending=False)
-                        
-                        df_visual = df_ordenado.rename(columns={
-                            "Tipo_Entrenamiento": "Tipo de Entrenamiento",
-                            "Promedio_Ritmo": "Ritmo Promedio",
-                            "Distancia": "Distancia (km)",
-                            "Tiempo": "Tiempo Total"
-                        })
-                        st.dataframe(df_visual, use_container_width=True)
-                    else: st.info("Aún no tienes entrenamientos registrados.")
-                else: st.info("No se registran datos en la base de datos principal.")
-                    
-            elif codigo_input: st.error("❌ Código incorrecto.")
-    except Exception as e: st.error(f"Error técnico: {e}")
-
-# ---------------------------------------------------------
-# OPCIÓN 3: PANEL DE CONTROL
-# ---------------------------------------------------------
-else:
-    st.markdown("<h1 class='main-title'>ÁREA RESTRINGIDA</h1>", unsafe_allow_html=True)
-    st.sidebar.divider()
-    st.sidebar.subheader("🔐 Acceso Entrenador")
-    password = st.sidebar.text_input("Llave Maestra:", type="password")
-
-    if password == "CoachJaz2026":
-        st.success("Acceso concedido.")
-        st.markdown("<h1 class='main-title'>CORRIENDO ANDO - ESTRATEGIA</h1>", unsafe_allow_html=True)
-        st.write("---")
-        try:
-            df = conn.read(ttl=0)
-            if df.empty: st.info("No se registran datos.")
-            else:
-                df['Fecha'] = pd.to_datetime(df['Fecha'])
-                atleta_sel = st.sidebar.selectbox("Seleccionar Atleta:", ["Todos"] + list(df['Atleta'].unique()))
-                if atleta_sel != "Todos": df = df[df['Atleta'] == atleta_sel]
-
-                c1, c2 = st.columns(2)
-                c1.metric("Kilómetros Acumulados", f"{df['Distancia'].sum():.1f} km")
-                c2.metric("Sesiones", len(df))
-                
-                st.plotly_chart(px.line(df, x='Fecha', y='Distancia', color='Atleta', title="Curva de Volumen", template="plotly_white"), use_container_width=True)
-                st.table(df)
-        except Exception as e: st.error(f"Error técnico: {e}")
+                            html_cal += f"<td style='padding: 12px
