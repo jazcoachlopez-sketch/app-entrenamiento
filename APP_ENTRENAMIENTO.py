@@ -68,7 +68,7 @@ with st.sidebar:
     st.caption("© 2026 Corriendo Ando - Paipa, Boyacá")
 
 # ---------------------------------------------------------
-# OPCIÓN 1: REGISTRO DE ENTRENAMIENTO (ESTRUCTURADO)
+# OPCIÓN 1: REGISTRO DE ENTRENAMIENTO
 # ---------------------------------------------------------
 if opcion == "📝 Registrar Entrenamiento":
     st.markdown("<h1 class='main-title'>¡BIENVENIDO, ATLETA! ⚡</h1>", unsafe_allow_html=True)
@@ -87,7 +87,6 @@ if opcion == "📝 Registrar Entrenamiento":
     except:
         pass
 
-    # SECCIÓN 1: DATOS DE IDENTIFICACIÓN
     col_base1, col_base2, col_base3 = st.columns(3)
     with col_base1:
         atleta_input = st.selectbox("Selecciona tu Nombre:", [""] + sorted(list(lista_atletas_roster)))
@@ -98,7 +97,6 @@ if opcion == "📝 Registrar Entrenamiento":
 
     st.write("---")
 
-    # SECCIÓN 2: TRABAJOS DE FONDO / RESISTENCIA
     st.markdown("### 🏃‍♂️ Trabajo de Fondo / Resistencia")
     col_fondo1, col_fondo2 = st.columns(2)
     with col_fondo1:
@@ -108,7 +106,6 @@ if opcion == "📝 Registrar Entrenamiento":
 
     st.write("---")
 
-    # SECCIÓN 3: TRABAJOS DE VELOCIDAD
     st.markdown("### ⏱️ Series de Velocidad (Si aplica)")
     tipo_entrenamiento_input = st.text_input("Tipo de Entrenamiento (ej: 10x400m, Cuestas explosivas, Fartlek):", placeholder="Deja vacío si sólo realizaste fondo continuo")
     num_rep = st.slider("Número de repeticiones realizadas", 1, 30, 5)
@@ -119,7 +116,6 @@ if opcion == "📝 Registrar Entrenamiento":
         t = cols[i % 4].text_input(f"Serie {i+1} (MM:SS)", key=f"rep_{i}", placeholder="0:00")
         if t: tiempos_series.append(t)
 
-    # Cálculo del promedio continuo
     tiempos_sec = [time_to_sec(t) for t in tiempos_series if t]
     prom_val = sum(tiempos_sec) / len(tiempos_sec) if tiempos_sec else 0
     if tiempos_sec: 
@@ -127,7 +123,6 @@ if opcion == "📝 Registrar Entrenamiento":
 
     st.write("---")
 
-    # PROCESAMIENTO SEGURO DEL BOTÓN DE GUARDADO
     if st.session_state.guardando_entrenamiento:
         st.button("⌛ Guardando entrenamiento...", disabled=True)
         
@@ -292,13 +287,14 @@ elif opcion == "📅 Mi Plan Semanal":
 # ---------------------------------------------------------
 else:
     st.markdown("<h1 class='main-title'>ÁREA RESTRINGIDA</h1>", unsafe_allow_html=True)
-    st.sidebar.divider()
-    st.sidebar.subheader("🔐 Acceso Entrenador")
-    password = st.sidebar.text_input("Llave Maestra:", type="password")
+    st.info("Acceso exclusivo para el Coach. Por favor, ingresa tu credencial.")
+    
+    # MOVIDO AL CENTRO DE LA PANTALLA PARA MAYOR VISIBILIDAD
+    password = st.text_input("🔑 Llave Maestra:", type="password", help="Ingresa tu clave y presiona ENTER")
 
     if password == "CoachJaz2026":
-        st.success("Acceso concedido.")
-        st.markdown("<h1 class='main-title'>CORRIENDO ANDO - ESTRATEGIA Y CONTROL</h1>", unsafe_allow_html=True)
+        st.success("✅ Acceso concedido.")
+        st.markdown("<h1 class='main-title' style='font-size: 2rem !important; margin-top: 20px;'>CORRIENDO ANDO - ESTRATEGIA Y CONTROL</h1>", unsafe_allow_html=True)
         st.write("---")
         
         try:
@@ -311,12 +307,17 @@ else:
                     df['Distancia'] = pd.to_numeric(df['Distancia'], errors='coerce').fillna(0)
                 
                 lista_atletas_registrados = sorted([a for a in df['Atleta'].dropna().unique() if str(a).strip() != ''])
-                atleta_sel = st.sidebar.selectbox("Filtrar por Atleta:", ["Todos los Atletas"] + lista_atletas_registrados)
+                
+                # FILTROS
+                col_filtro1, col_filtro2 = st.columns(2)
+                with col_filtro1:
+                    atleta_sel = st.selectbox("👤 Filtrar por Atleta:", ["Todos los Atletas"] + lista_atletas_registrados)
                 
                 df_filtrado = df.copy()
                 if atleta_sel != "Todos los Atletas":
                     df_filtrado = df_filtrado[df_filtrado['Atleta'] == atleta_sel]
 
+                # MÉTRICAS
                 k1, k2, k3 = st.columns(3)
                 k1.metric("Km Totales Acumulados", f"{df_filtrado['Distancia'].sum():.1f} km")
                 k2.metric("Sesiones Registradas", len(df_filtrado))
@@ -324,6 +325,8 @@ else:
                 k3.metric("Promedio Km / Sesión", f"{prom_km:.1f} km")
 
                 st.write("---")
+                
+                # TABLA CENTRAL
                 st.subheader("📋 Registro Completo de Entrenamientos")
                 
                 columnas_principales = ["Fecha", "Atleta", "Jornada", "Tipo_Entrenamiento", "Distancia", "Tiempo", "Promedio_Ritmo"]
@@ -346,6 +349,8 @@ else:
                 st.dataframe(df_tabla_renombrada, use_container_width=True, hide_index=True)
 
                 st.write("---")
+                
+                # GRÁFICA
                 st.subheader("📈 Evolución del Volumen (Kilómetros)")
                 if 'Fecha' in df_filtrado.columns and not df_filtrado.empty:
                     df_graf = df_filtrado.copy()
@@ -365,6 +370,7 @@ else:
                     fig.update_traces(line_color='#2E7D32' if atleta_sel != "Todos los Atletas" else None)
                     st.plotly_chart(fig, use_container_width=True)
 
+                # ANÁLISIS DE SERIES
                 if atleta_sel != "Todos los Atletas" and not df_filtrado.empty:
                     st.write("---")
                     st.subheader(f"⏱️ Inspección de Series de {atleta_sel}")
