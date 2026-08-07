@@ -65,7 +65,7 @@ with st.sidebar:
     st.caption("© 2026 Corriendo Ando - Paipa, Boyacá")
 
 # ---------------------------------------------------------
-# OPCIÓN 1: REGISTRO DE ENTRENAMIENTO (ESTRUCTURADO)
+# OPCIÓN 1: REGISTRO DE ENTRENAMIENTO
 # ---------------------------------------------------------
 if opcion == "📝 Registrar Entrenamiento":
     st.markdown("<h1 class='main-title'>¡BIENVENIDO, ATLETA! ⚡</h1>", unsafe_allow_html=True)
@@ -84,7 +84,6 @@ if opcion == "📝 Registrar Entrenamiento":
     except:
         pass
 
-    # SECCIÓN 1: DATOS DE IDENTIFICACIÓN
     col_base1, col_base2, col_base3 = st.columns(3)
     with col_base1:
         atleta_input = st.selectbox("Selecciona tu Nombre:", [""] + sorted(list(lista_atletas_roster)))
@@ -95,137 +94,6 @@ if opcion == "📝 Registrar Entrenamiento":
 
     st.write("---")
 
-    # SECCIÓN 2: TRABAJOS DE FONDO / RESISTENCIA
     st.markdown("### 🏃‍♂️ Trabajo de Fondo / Resistencia")
     col_fondo1, col_fondo2 = st.columns(2)
     with col_fondo1:
-        distancia = st.number_input("Distancia Real Alcanzada (km)", min_value=0.0, step=0.1, help="Kilómetros totales recorridos")
-    with col_fondo2:
-        tiempo = st.text_input("Tiempo Total Acumulado (HH:MM:SS)", placeholder="ej: 00:45:30")
-
-    st.write("---")
-
-    # SECCIÓN 3: TRABAJOS DE VELOCIDAD
-    st.markdown("### ⏱️ Series de Velocidad (Si aplica)")
-    tipo_entrenamiento_input = st.text_input("Tipo de Entrenamiento (ej: 10x400m, Cuestas explosivas, Fartlek):", placeholder="Deja vacío si sólo realizaste fondo continuo")
-    num_rep = st.slider("Número de repeticiones realizadas", 1, 30, 5)
-    
-    cols = st.columns(4)
-    tiempos_series = []
-    for i in range(num_rep):
-        t = cols[i % 4].text_input(f"Serie {i+1} (MM:SS)", key=f"rep_{i}", placeholder="0:00")
-        if t: tiempos_series.append(t)
-
-    # Cálculo del promedio continuo
-    tiempos_sec = [time_to_sec(t) for t in tiempos_series if t]
-    prom_val = sum(tiempos_sec) / len(tiempos_sec) if tiempos_sec else 0
-    if tiempos_sec: 
-        st.info(f"⚡ **Promedio de ritmo en series:** {sec_to_time(prom_val)} min/rep")
-
-    st.write("---")
-
-    # PROCESAMIENTO SEGURO DEL BOTÓN DE GUARDADO
-    if st.session_state.guardando_entrenamiento:
-        st.button("⌛ Guardando entrenamiento...", disabled=True)
-        
-        if not atleta_input or atleta_input == "":
-            st.error("❌ Por favor, selecciona tu nombre de la lista desplegable antes de guardar.")
-            st.session_state.guardando_entrenamiento = False
-            st.rerun()
-        else:
-            try:
-                fecha_str = fecha_input.strftime("%Y-%m-%d")
-                existente = conn.read(ttl=0)
-                es_duplicado = False
-                
-                if not existente.empty:
-                    existente.columns = existente.columns.astype(str).str.strip().str.replace(" ", "_")
-                    duplicados = existente[
-                        (existente['Fecha'].astype(str) == fecha_str) & 
-                        (existente['Atleta'].astype(str) == atleta_input) & 
-                        (existente['Jornada'].astype(str) == jornada) & 
-                        (existente['Tipo_Entrenamiento'].astype(str) == tipo_entrenamiento_input)
-                    ]
-                    if not duplicados.empty:
-                        es_duplicado = True
-                
-                if es_duplicado:
-                    st.warning("⚠️ Este entrenamiento ya fue registrado hace unos instantes.")
-                    time.sleep(2)
-                else:
-                    nuevo_reg = {
-                        "Fecha": [fecha_str], 
-                        "Atleta": [atleta_input], 
-                        "Jornada": [jornada], 
-                        "Distancia": [distancia], 
-                        "Tiempo": [tiempo], 
-                        "Tipo_Entrenamiento": [tipo_entrenamiento_input], 
-                        "Promedio_Ritmo": [sec_to_time(prom_val)]
-                    }
-                    for i in range(20):
-                        nuevo_reg[f"Serie_{i+1}"] = [tiempos_series[i] if i < len(tiempos_series) else ""]
-                        
-                    df_final = pd.concat([existente, pd.DataFrame(nuevo_reg)], ignore_index=True)
-                    conn.update(data=df_final)
-                    st.success("¡Entrenamiento guardado con éxito!")
-                    st.balloons()
-                    time.sleep(1.5)
-                
-            except Exception as e:
-                st.error(f"Error técnico al guardar: {e}")
-            
-            st.session_state.guardando_entrenamiento = False
-            st.rerun()
-    else:
-        st.button("🚀 Guardar Entrenamiento", on_click=activar_guardado)
-
-# ---------------------------------------------------------
-# OPCIÓN 2: MI PLAN SEMANAL
-# ---------------------------------------------------------
-elif opcion == "📅 Mi Plan Semanal":
-    st.markdown("<h1 class='main-title'>TU PLAN SEMANAL 📅</h1>", unsafe_allow_html=True)
-    try:
-        df_planes = conn.read(worksheet="Planes", ttl=0)
-        if not df_planes.empty:
-            df_planes.columns = df_planes.columns.astype(str).str.strip().str.replace(" ", "_")
-            
-        lista_atletas = [a for a in df_planes['Atleta'].unique() if str(a).lower() != 'nan' and str(a).strip() != '']
-        atleta_plan = st.selectbox("Selecciona tu nombre:", [""] + list(lista_atletas))
-
-        if atleta_plan:
-            df_mi = df_planes[df_planes['Atleta'] == atleta_plan].copy()
-            codigo_real = str(df_mi['Codigo'].iloc[0]).strip()
-            codigo_input = st.text_input("🔑 Código de acceso:", type="password")
-            
-            if codigo_input and codigo_input.strip() == codigo_real:
-                st.success("Acceso concedido.")
-                
-                comp = df_mi['Proxima_Competencia'].iloc[0] if 'Proxima_Competencia' in df_mi.columns else "No definida"
-                obj = df_mi['Objetivo_Plan'].iloc[0] if 'Objetivo_Plan' in df_mi.columns else "No definido"
-                obs = df_mi['Observacion_Coach'].iloc[0] if 'Observacion_Coach' in df_mi.columns else "Sin observaciones."
-                
-                col1, col2 = st.columns(2)
-                col1.info(f"🏆 **Competencia:** {comp}")
-                col2.info(f"🎯 **Objetivo:** {obj}")
-                
-                st.write(f"### 🗓️ Calendario de: **{atleta_plan}**")
-                df_mi['Dia'] = df_mi['Dia'].astype(str).str.strip().str.capitalize()
-                df_mi['Jornada'] = df_mi['Jornada'].astype(str).str.strip().str.capitalize()
-                df_mi['Dia'] = df_mi['Dia'].replace({"Miercoles": "Miércoles", "Sabado": "Sábado"})
-                dias_semana = ["Lunes", "Martes", "Miércoles", "Jueves", "Viernes", "Sábado", "Domingo"]
-                
-                html_cal = """<div style="overflow-x:auto; margin-top: 10px;">
-                <table style="width:100%; border-collapse: collapse; font-family: 'Montserrat', sans-serif; font-size: 0.95em; box-shadow: 0 4px 8px rgba(0,0,0,0.1);">
-                    <tr style="background-color: #2E7D32; color: white; text-align: center;">
-                        <th style="padding: 12px; border: 1px solid #ddd; width: 10%;">Jornada</th>"""
-                for d in dias_semana: html_cal += f"<th style='padding: 12px; border: 1px solid #ddd; min-width: 140px; text-align: center;'>{d}</th>"
-                html_cal += "</tr>"
-
-                for j in ["Mañana", "Tarde"]:
-                    html_cal += f"<tr><td style='padding: 12px; border: 1px solid #ddd; font-weight: bold; background-color: #f9f9f9; text-align: center;'>{j}</td>"
-                    for dia in dias_semana:
-                        plan = df_mi[(df_mi['Dia'] == dia) & (df_mi['Jornada'] == j)]
-                        if not plan.empty:
-                            f_val = plan.iloc[0]['Fecha'] if 'Fecha' in plan.columns else ""
-                            e_val = plan.iloc[0]['Entrenamiento'] if 'Entrenamiento' in plan.columns else ""
-                            html_cal += f"<td style='padding: 12px
