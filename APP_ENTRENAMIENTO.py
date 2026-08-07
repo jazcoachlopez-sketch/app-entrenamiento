@@ -56,7 +56,7 @@ with st.sidebar:
     col_l1, col_l2, col_l3 = st.columns([1, 5, 1])
     with col_l2:
         try: 
-            st.image("logo.png", use_container_width=True)
+            st.image("Gemini_Generated_Image_pm4871pm4871pm48.png", use_container_width=True)
         except: 
             st.image("https://cdn-icons-png.flaticon.com/512/7159/7159044.png", use_container_width=True)
             
@@ -292,7 +292,7 @@ else:
     # MOVIDO AL CENTRO DE LA PANTALLA PARA MAYOR VISIBILIDAD
     password = st.text_input("🔑 Llave Maestra:", type="password", help="Ingresa tu clave y presiona ENTER")
 
-    if password == "CoachJaz2026":
+    if password == "Jaz2026":
         st.success("✅ Acceso concedido.")
         st.markdown("<h1 class='main-title' style='font-size: 2rem !important; margin-top: 20px;'>CORRIENDO ANDO - ESTRATEGIA Y CONTROL</h1>", unsafe_allow_html=True)
         st.write("---")
